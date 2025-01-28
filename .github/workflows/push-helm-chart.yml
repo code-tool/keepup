@@ -1,8 +1,7 @@
 name: Package and Push Helm Chart
 
 on:
-  workflow_dispatch:  # Manual trigger
-
+  workflow_dispatch:  
 jobs:
   package-and-push:
     runs-on: ubuntu-latest
@@ -14,7 +13,7 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
-          version: "v3.12.0"  # Specify the Helm version you want to use
+          version: "v3.12.0" 
 
       - name: Package Helm chart
         run: |

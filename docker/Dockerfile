@@ -16,8 +16,6 @@ RUN apt-get update \
     ca-certificates \
   && rm -rf /var/cache/apt/archives/*
 COPY --from=builder /opt/keepup/keepup .
-ADD ./client/puppet.tar.bz2 /opt/keepup/static/puppet.tar.bz2
-ADD ./client/ansible.tar.bz2 /opt/keepup/static/ansible.tar.bz2
 
 EXPOSE ${LISTEN_PORT}
 CMD ["/opt/keepup/keepup"]
