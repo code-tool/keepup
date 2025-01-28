@@ -1,0 +1,13 @@
+{
+  "packages": {
+      "debian": "11",
+      "mongodb": "7.3",
+      "redis": "5:7.0.15-1~deb12u1",
+      "mysql": "unknown",
+      "rabbitmq": "unknown",
+      "memcached": "1.6.18-1",
+      "envoy": "unknown",
+      "host_ip": "101.122.418.4",
+      "data_center": "aaa"
+    }
+}

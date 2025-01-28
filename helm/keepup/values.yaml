@@ -1,0 +1,26 @@
+global:
+  kubeVersion: ""
+
+applicationName: "keepup"
+replicas: 1
+
+main:
+  image: "golang:1.16.15"
+  pullPolicy: "IfNotPresent"
+
+redis:
+  enabled: false
+  image: "redis:6.2.7"
+  pullPolicy: "IfNotPresent"
+
+ingress:
+  pathType: ImplementationSpecific
+  apiVersion: ""
+  ingressClassName: ""
+  enabled: false
+  tls: false
+  secretName: ""
+  host: ""
+
+servicemonitor:
+  enabled: false
