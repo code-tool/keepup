@@ -6,7 +6,7 @@ replicas: 1
 
 main:
   image: "golang:1.16.15"
-  pullPolicy: "IfNotPresent"
+  pullPolicy: "Always"
 
 redis:
   enabled: false
