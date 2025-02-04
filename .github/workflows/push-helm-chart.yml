@@ -29,7 +29,7 @@ jobs:
 
       - name: Update Chart Version (Force Release)
         run: |
-          chart_path="charts/my-app/Chart.yaml"
+          chart_path="helm/keepup/Chart.yaml"
           new_version=$(date +'%Y.%m.%d.%H%M%S')  # Generates a timestamp-based version
           echo "Setting chart version to $new_version"
           sed -i "s/^version: .*/version: $new_version/" "$chart_path"
