@@ -27,14 +27,6 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Ensure `gh-pages` Exists
-        run: |
-          git fetch origin gh-pages || git checkout --orphan gh-pages
-          git checkout gh-pages
-          [ -f index.yaml ] || echo '{}' > index.yaml
-          git add index.yaml
-          git commit -m "Ensure gh-pages branch has index.yaml" || true
-          git push origin gh-pages
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
