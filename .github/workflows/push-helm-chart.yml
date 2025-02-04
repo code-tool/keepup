@@ -27,23 +27,23 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Delete Previous Release (Force Update)
-        continue-on-error: true
+      - name: Update Chart Version (Force Release)
         run: |
-          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-          gh release delete $latest_tag --yes || true
+          chart_path="charts/my-app/Chart.yaml"
+          new_version=$(date +'%Y.%m.%d.%H%M%S')  # Generates a timestamp-based version
+          echo "Setting chart version to $new_version"
+          sed -i "s/^version: .*/version: $new_version/" "$chart_path"
+          cat "$chart_path"  # Debugging output to check changes
+
+      - name: Commit and Push Updated Chart Version
+        run: |
+          git add charts/my-app/Chart.yaml
+          git commit -m "Force update Helm chart version to $new_version"
+          git push origin main
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Force Push Updated Chart to gh-pages
-        run: |
-          git fetch origin gh-pages
-          git checkout gh-pages
-          git add .
-          git commit -m "Force update Helm chart"
-          git push origin gh-pages --force
