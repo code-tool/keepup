@@ -27,10 +27,23 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
+      - name: Delete Previous Release (Force Update)
+        continue-on-error: true
+        run: |
+          latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+          gh release delete $latest_tag --yes || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-        with:
-          charts_dir: helm
+
+      - name: Force Push Updated Chart to gh-pages
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
+          git add .
+          git commit -m "Force update Helm chart"
+          git push origin gh-pages --force
