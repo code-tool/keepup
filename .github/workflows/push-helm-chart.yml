@@ -1,49 +1,73 @@
-name: Release Charts
+name: Release Helm Charts
+
+concurrency: release-helm
 
 on:
-  workflow_run:
-    workflows: ["Docker Image"]
-    types:
-      - completed
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'helm/**'
 
 jobs:
   release:
-    permissions:
-      contents: write
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout Main Branch (Source)
         uses: actions/checkout@v3
         with:
+          path: 'src'
+          ref: 'main'
           fetch-depth: 0
 
-      - name: Configure Git
-        run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+      - name: Checkout GitHub Pages Branch (Destination)
+        uses: actions/checkout@v3
+        with:
+          path: 'dest'
+          ref: 'gh-pages'
+          fetch-depth: 0
 
       - name: Install Helm
         uses: azure/setup-helm@v4
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Update Chart Version (Force Release)
+      - name: Package and Index Helm Chart
+        shell: bash
+        working-directory: src
         run: |
-          chart_path="helm/keepup/Chart.yaml"
-          new_version=$(date +'%Y.%m.%d.%H%M%S')  # Generates a timestamp-based version
-          echo "Setting chart version to $new_version"
-          sed -i "s/^version: .*/version: $new_version/" "$chart_path"
-          cat "$chart_path"  # Debugging output to check changes
+          # Define paths
+          CHART_NAME="keepup"
+          CHARTS_DIR="./helm/${CHART_NAME}"
+          DEST_DIR="../dest/helm"
 
-      - name: Commit and Push Updated Chart Version
+          # Ensure directories exist
+          mkdir -p ${DEST_DIR}
+
+          # Package Helm chart (excluding configs/)
+          echo "Packaging Helm chart: ${CHART_NAME}"
+          helm package "${CHARTS_DIR}" --destination "${DEST_DIR}"
+
+          # Update Helm repo index
+          echo "Updating Helm repo index..."
+          helm repo index ${DEST_DIR} --merge ../dest/index.yaml --url "https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/helm/"
+
+      - name: Commit and Push Updates to Main Branch
+        shell: bash
+        working-directory: src
         run: |
-          git add helm/keepup/Chart.yaml
-          git commit -m "Force update Helm chart version to $new_version"
-          git push origin main
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add .
+          git commit -m "Updated Helm charts from ref: $GITHUB_SHA" || echo "No changes to commit"
+          git push
 
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Commit and Push Updated Helm Repo to GitHub Pages
+        shell: bash
+        working-directory: dest
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add $(git ls-files -o --exclude-standard)
+          git add index.yaml
+          git commit -m "Updated Helm repo index from ref: $GITHUB_SHA" || echo "No changes to commit"
+          git push
