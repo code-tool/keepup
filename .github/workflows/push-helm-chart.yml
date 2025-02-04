@@ -31,6 +31,18 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v4
 
+      - name: Debugging - Check Existing index.yaml
+        shell: bash
+        working-directory: dest
+        run: |
+          echo "Checking index.yaml file..."
+          if [ -f "index.yaml" ]; then
+            echo "index.yaml exists. Contents:"
+            cat index.yaml
+          else
+            echo "index.yaml is missing!"
+          fi
+
       - name: Package and Index Helm Chart
         shell: bash
         working-directory: src
@@ -39,6 +51,7 @@ jobs:
           CHART_NAME="keepup"
           CHARTS_DIR="./helm/${CHART_NAME}"
           DEST_DIR="../dest/helm"
+          INDEX_FILE="../dest/index.yaml"
 
           # Ensure directories exist
           mkdir -p ${DEST_DIR}
@@ -47,19 +60,20 @@ jobs:
           echo "Packaging Helm chart: ${CHART_NAME}"
           helm package "${CHARTS_DIR}" --destination "${DEST_DIR}"
 
-          # Update Helm repo index
-          echo "Updating Helm repo index..."
-          helm repo index ${DEST_DIR} --merge ../dest/index.yaml --url "https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/helm/"
-
-      - name: Commit and Push Updates to Main Branch
-        shell: bash
-        working-directory: src
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "github-actions@users.noreply.github.com"
-          git add .
-          git commit -m "Updated Helm charts from ref: $GITHUB_SHA" || echo "No changes to commit"
-          git push
+          # Validate and fix index.yaml if necessary
+          if [ -f "$INDEX_FILE" ]; then
+            if [ ! -s "$INDEX_FILE" ]; then
+              echo "index.yaml is empty. Creating a new one..."
+              rm -f "$INDEX_FILE"
+              helm repo index ${DEST_DIR} --url "https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/helm/"
+            else
+              echo "Merging with existing index.yaml..."
+              helm repo index ${DEST_DIR} --merge "$INDEX_FILE" --url "https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/helm/"
+            fi
+          else
+            echo "index.yaml not found. Creating a new one..."
+            helm repo index ${DEST_DIR} --url "https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/helm/"
+          fi
 
       - name: Commit and Push Updated Helm Repo to GitHub Pages
         shell: bash
