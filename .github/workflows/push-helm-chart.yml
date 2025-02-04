@@ -1,32 +1,35 @@
-name: Package and Push Helm Chart
+name: Release Charts
 
 on:
-  workflow_dispatch:  
+  workflow_run:
+    workflows: ["Docker Image"]
+    types:
+      - completed
+
 jobs:
-  package-and-push:
+  release:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
         with:
-          version: "v3.12.0" 
+          fetch-depth: 0
 
-      - name: Package Helm chart
+      - name: Configure Git
         run: |
-          helm package ./path/to/your/chart -d ./charts
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      - name: Push Helm chart to GitHub Pages
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git clone https://github.com/${{ github.repository }}.git --branch gh-pages ./gh-pages
-          cp ./charts/*.tgz ./gh-pages/charts/
-          cd ./gh-pages
-          helm repo index . --url https://${{ github.repository_owner }}.github.io/${{ github.repository }}/charts
-          git add .
-          git commit -m "Update Helm chart"
-          git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git gh-pages
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          charts_dir: helm
