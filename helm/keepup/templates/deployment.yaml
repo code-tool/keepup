@@ -17,6 +17,11 @@ spec:
       labels:
         app: keepup
         type: backend
+      annotations:
+        rollme: {{ randAlphaNum 5 | quote }}
+        "prometheus.io/scrape": 'true'
+        "prometheus.io/port": '80'
+        "prometheus.io/path": '/metrics'
     spec:
       containers:
 {{ if .Values.redis.enabled  }}
