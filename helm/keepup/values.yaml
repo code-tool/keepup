@@ -1,26 +1,28 @@
-global:
-  kubeVersion: ""
-
-applicationName: "keepup"
 replicas: 1
 
 main:
-  image: "golang:1.16.15"
-  pullPolicy: "Always"
+  image: "eu.gcr.io/rocket-222613/keepup:v2.0.0"
+  pullPolicy: "IfNotPresent"
 
 redis:
-  enabled: false
+  enabled: true
   image: "redis:6.2.7"
   pullPolicy: "IfNotPresent"
 
 ingress:
+  enabled: true
   pathType: ImplementationSpecific
-  apiVersion: ""
   ingressClassName: ""
-  enabled: false
   tls: false
   secretName: ""
   host: ""
 
 servicemonitor:
-  enabled: false
+  enabled: true
+
+annotations: {}
+#  "prometheus.io/scrape": 'true'
+#  "prometheus.io/port": '80'
+#  "prometheus.io/path": '/metrics'
+
+apiToken: ''

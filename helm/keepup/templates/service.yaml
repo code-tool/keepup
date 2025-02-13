@@ -4,6 +4,8 @@ metadata:
   name: keepup-service
   labels:
     scrapePrometheus80: 'true'
+    app: keepup
+    type: backend
 spec:
   selector:
     app: keepup

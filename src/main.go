@@ -22,11 +22,12 @@ import (
 )
 
 var (
-	server           *http.Server
-	shutdownWaiter   sync.WaitGroup
-	PackageHandler   *handler.PackageVersionsHandler
-	osReleaseHandler *handler.OsReleasesMiddleware
-	buildVersion     string
+	server             *http.Server
+	shutdownWaiter     sync.WaitGroup
+	PackageHandler     *handler.PackageVersionsHandler
+	osReleaseHandler   *handler.OsReleasesMiddleware
+	kubeClusterHandler *handler.KubernetesClusterMiddleware
+	buildVersion       string
 )
 
 func main() {
@@ -66,14 +67,30 @@ func main() {
 		TTL:      ttlSeconds,
 	}
 
+	kubeClusterHandler = &handler.KubernetesClusterMiddleware{
+		Clusters: &handler.KubernetesClusters{
+			Items: make(map[uuid.UUID]handler.KubernetesCluster),
+		},
+		Context:  ctx,
+		Client:   con,
+		ApiToken: config.GetConfig().API_TOKEN,
+		TTL:      ttlSeconds,
+	}
+
 	osReleaseCollector := metrics.OsReleaseCollector{
 		RelInfo: osReleaseHandler,
 	}
 	packageCollector := metrics.PackageVersionsCollector{
 		PackageInfo: PackageHandler,
 	}
+
+	HelmCollector := metrics.KubernetesClusterCollector{
+		ClusterInfo: kubeClusterHandler,
+	}
+
 	prometheus.MustRegister(packageCollector)
 	prometheus.MustRegister(osReleaseCollector)
+	prometheus.MustRegister(HelmCollector)
 
 	shutdownWaiter.Add(1)
 	configureServer()

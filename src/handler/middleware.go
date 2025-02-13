@@ -49,6 +49,24 @@ type IDDocument struct {
 	ID uuid.UUID `json:"id"`
 }
 
+type KubernetesClusterMiddleware struct {
+	Clusters *KubernetesClusters
+	Client   *redis.Client
+	Context  context.Context
+	ApiToken string
+	TTL      int
+}
+
+// ClusterDocument represents a request to store cluster data
+type ClusterDocument struct {
+	Cluster KubernetesCluster `json:"cluster"`
+}
+
+// IDDocument is used for retrieving data by ID
+type IDClusterDocument struct {
+	ID uuid.UUID `json:"id"`
+}
+
 func (s *OsReleasesMiddleware) HandleOsRelease(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("x-api-token")
 	if token != s.ApiToken {
@@ -236,5 +254,82 @@ func (s *PackageVersionsHandler) HandlePackage(w http.ResponseWriter, r *http.Re
 			w.Header().Set("Content-Type", "application/json")
 			s.handleInsertPackages(w, r)
 		}
+	}
+}
+
+// HandleKubernetesCluster processes incoming API requests
+func (s *KubernetesClusterMiddleware) HandleKubernetesCluster(w http.ResponseWriter, r *http.Request) {
+	token := r.Header.Get("x-api-token")
+	if token != s.ApiToken {
+		http.Error(w, "FORBIDDEN", http.StatusForbidden)
+		return
+	}
+
+	switch strings.ToUpper(r.Method) {
+	case "GET":
+		w.Header().Set("Content-Type", "application/json")
+		s.handleGetClusterByID(w, r)
+	case "PUT":
+		w.Header().Set("Content-Type", "application/json")
+		s.handleInsertCluster(w, r)
+	}
+}
+
+// Insert a new cluster
+func (s *KubernetesClusterMiddleware) handleInsertCluster(w http.ResponseWriter, r *http.Request) {
+	var cluster KubernetesCluster
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Failed to read request body:", err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Received JSON: %s", string(body))
+	if err := json.Unmarshal(body, &cluster); err != nil {
+		log.Println("Failed to parse JSON:", err)
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	id, err := s.Clusters.InsertClusterData(cluster, s.Context, s.Client, s.TTL)
+	if err != nil {
+		log.Println("Failed to insert cluster:", err)
+		http.Error(w, "Failed to store data", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(IDClusterDocument{ID: id})
+	log.Printf("Cluster stored with ID: %s", id)
+}
+
+// handleGetClusterByID retrieves a cluster by ID
+func (s *KubernetesClusterMiddleware) handleGetClusterByID(w http.ResponseWriter, r *http.Request) {
+	var req IDClusterDocument
+
+	// Decode request JSON
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Invalid JSON request", http.StatusBadRequest)
+		return
+	}
+
+	// Retrieve cluster data using the correct method
+	cluster, err := s.Clusters.RetrieveCluster(req.ID, s.Context, s.Client)
+	if err == ErrClusterNotFound {
+		http.Error(w, "Cluster not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with cluster data
+	res := ClusterDocument{Cluster: cluster}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
 	}
 }
