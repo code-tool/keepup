@@ -37,8 +37,7 @@ jobs:
         run: |
           echo "Checking index.yaml file..."
           if [ -f "index.yaml" ]; then
-            echo "index.yaml exists. Contents:"
-            cat index.yaml
+            echo "index.yaml exists"
           else
             echo "index.yaml is missing!"
           fi
@@ -47,20 +46,17 @@ jobs:
         shell: bash
         working-directory: src
         run: |
-          # Define paths
-          CHART_NAME="keepup"
+          CHART_NAME="helm-scraper"
           CHARTS_DIR="./helm/${CHART_NAME}"
           DEST_DIR="../dest/helm"
           INDEX_FILE="../dest/index.yaml"
 
-          # Ensure directories exist
+
           mkdir -p ${DEST_DIR}
 
-          # Package Helm chart (excluding configs/)
+
           echo "Packaging Helm chart: ${CHART_NAME}"
           helm package "${CHARTS_DIR}" --destination "${DEST_DIR}"
-
-          # Validate and fix index.yaml if necessary
           if [ -f "$INDEX_FILE" ]; then
             if [ ! -s "$INDEX_FILE" ]; then
               echo "index.yaml is empty. Creating a new one..."
