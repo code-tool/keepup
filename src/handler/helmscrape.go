@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// KubernetesCluster represents a single cluster's data
 type KubernetesCluster struct {
 	ID          uuid.UUID       `json:"id"`
 	ClusterName string          `json:"cluster_name"`
@@ -21,14 +20,12 @@ type KubernetesCluster struct {
 	UpdatedAt   string          `json:"updated_at"`
 }
 
-// HelmChartData stores details of a Helm chart
 type HelmChartData struct {
 	ChartName string `json:"chart_name"`
 	Version   string `json:"version"`
 	Namespace string `json:"namespace"`
 }
 
-// KubernetesClusters stores multiple clusters
 type KubernetesClusters struct {
 	Items map[uuid.UUID]KubernetesCluster
 }
@@ -39,9 +36,8 @@ var (
 	ErrClusterNotFound      = errors.New("Cluster ID not found")
 )
 
-// Insert stores a cluster's data in Redis
 func (c *KubernetesClusters) InsertClusterData(cluster KubernetesCluster, ctx context.Context, con *redis.Client, ttl int) (uuid.UUID, error) {
-	// Generate UUID only from ClusterName
+
 	cluster.ID = UUIDFromClusterName(cluster.ClusterName)
 	cluster.UpdatedAt = fmt.Sprint(time.Now().Unix())
 
@@ -50,7 +46,6 @@ func (c *KubernetesClusters) InsertClusterData(cluster KubernetesCluster, ctx co
 		return cluster.ID, ErrClusterMarshalFailed
 	}
 
-	// Store in Redis
 	_, err = con.Set(ctx, fmt.Sprint(cluster.ID), data, time.Duration(ttl)*time.Second).Result()
 	if err != nil {
 		return cluster.ID, ErrClusterInsertFailed
@@ -60,7 +55,6 @@ func (c *KubernetesClusters) InsertClusterData(cluster KubernetesCluster, ctx co
 	return cluster.ID, nil
 }
 
-// Retrieve fetches a cluster by UUID from Redis
 func (c *KubernetesClusters) RetrieveCluster(id uuid.UUID, ctx context.Context, con *redis.Client) (KubernetesCluster, error) {
 	data, err := con.Get(ctx, fmt.Sprint(id)).Result()
 	if err != nil {
@@ -74,7 +68,6 @@ func (c *KubernetesClusters) RetrieveCluster(id uuid.UUID, ctx context.Context, 
 	return cluster, nil
 }
 
-// Scan retrieves all stored clusters
 func (c *KubernetesClusters) ScanClusters(ctx context.Context, con *redis.Client) (KubernetesClusters, error) {
 	var clusters = KubernetesClusters{
 		Items: make(map[uuid.UUID]KubernetesCluster),
@@ -100,7 +93,6 @@ func (c *KubernetesClusters) ScanClusters(ctx context.Context, con *redis.Client
 	return clusters, nil
 }
 
-// UUIDFromClusterName generates UUID based only on cluster name
 func UUIDFromClusterName(clusterName string) uuid.UUID {
 	return uuid.NewSHA1(uuid.NameSpaceDNS, []byte(clusterName))
 }
