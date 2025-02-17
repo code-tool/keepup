@@ -14,7 +14,7 @@ import (
 
 type KubernetesCluster struct {
 	ID          uuid.UUID       `json:"id"`
-	ClusterName string          `json:"cluster_name"`
+	ClusterName string          `json:"cluster_name"` // Default value from scraper: minikube
 	KubeVersion string          `json:"kube_version"`
 	HelmCharts  []HelmChartData `json:"helm_charts"`
 	UpdatedAt   string          `json:"updated_at"`
@@ -93,6 +93,8 @@ func (c *KubernetesClusters) ScanClusters(ctx context.Context, con *redis.Client
 	return clusters, nil
 }
 
+// TODO
+// Add more uniqe values to identife entity. To prevent names overlaping for different projects.
 func UUIDFromClusterName(clusterName string) uuid.UUID {
 	return uuid.NewSHA1(uuid.NameSpaceDNS, []byte(clusterName))
 }

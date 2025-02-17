@@ -255,6 +255,8 @@ func (s *PackageVersionsHandler) HandlePackage(w http.ResponseWriter, r *http.Re
 	}
 }
 
+// TODO
+// Simplife new endpoint handling logic. Maybe define common handler for all endpoints.
 func (s *KubernetesClusterMiddleware) HandleKubernetesCluster(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("x-api-token")
 	if token != s.ApiToken {
