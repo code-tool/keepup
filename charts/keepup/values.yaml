@@ -1,7 +1,7 @@
 replicas: 1
 
 main:
-  image: "eu.gcr.io/rocket-222613/keepup:v2.0.0"
+  image: "docker.io/sskorobohatko/keepup:latest"
   pullPolicy: "IfNotPresent"
 
 redis:
