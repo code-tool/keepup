@@ -1,83 +1,33 @@
-name: Release Helm Charts
-
-concurrency: release-helm
+name: Release Charts
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
-    paths:
-      - 'helm/**'
 
 jobs:
   release:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Main Branch (Source)
+      - name: Checkout
         uses: actions/checkout@v3
         with:
-          path: 'src'
-          ref: 'main'
           fetch-depth: 0
 
-      - name: Checkout GitHub Pages Branch (Destination)
-        uses: actions/checkout@v3
-        with:
-          path: 'dest'
-          ref: 'gh-pages'
-          fetch-depth: 0
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v3
 
-      - name: Debugging - Check Existing index.yaml
-        shell: bash
-        working-directory: dest
-        run: |
-          echo "Checking index.yaml file..."
-          if [ -f "index.yaml" ]; then
-            echo "index.yaml exists"
-          else
-            echo "index.yaml is missing!"
-          fi
-
-      - name: Package and Index Helm Chart
-        shell: bash
-        working-directory: src
-        run: |
-          CHART_NAME="helm-scraper"
-          CHARTS_DIR="./helm/${CHART_NAME}"
-          DEST_DIR="../dest/helm"
-          INDEX_FILE="../dest/index.yaml"
-
-
-          mkdir -p ${DEST_DIR}
-
-
-          echo "Packaging Helm chart: ${CHART_NAME}"
-          helm package "${CHARTS_DIR}" --destination "${DEST_DIR}"
-          if [ -f "$INDEX_FILE" ]; then
-            if [ ! -s "$INDEX_FILE" ]; then
-              echo "index.yaml is empty. Creating a new one..."
-              rm -f "$INDEX_FILE"
-              helm repo index ${DEST_DIR} --url "https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/helm/"
-            else
-              echo "Merging with existing index.yaml..."
-              helm repo index ${DEST_DIR} --merge "$INDEX_FILE" --url "https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/helm/"
-            fi
-          else
-            echo "index.yaml not found. Creating a new one..."
-            helm repo index ${DEST_DIR} --url "https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/helm/"
-          fi
-
-      - name: Commit and Push Updated Helm Repo to GitHub Pages
-        shell: bash
-        working-directory: dest
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "github-actions@users.noreply.github.com"
-          git add $(git ls-files -o --exclude-standard)
-          git add index.yaml
-          git commit -m "Updated Helm repo index from ref: $GITHUB_SHA" || echo "No changes to commit"
-          git push
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        with:
+          skip_existing: true
+          packages_with_index: true
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
