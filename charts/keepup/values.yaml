@@ -1,0 +1,28 @@
+replicas: 1
+
+main:
+  image: "eu.gcr.io/rocket-222613/keepup:v2.0.0"
+  pullPolicy: "IfNotPresent"
+
+redis:
+  enabled: true
+  image: "redis:6.2.7"
+  pullPolicy: "IfNotPresent"
+
+ingress:
+  enabled: true
+  pathType: ImplementationSpecific
+  ingressClassName: ""
+  tls: false
+  secretName: ""
+  host: ""
+
+servicemonitor:
+  enabled: true
+
+annotations: {}
+#  "prometheus.io/scrape": 'true'
+#  "prometheus.io/port": '80'
+#  "prometheus.io/path": '/metrics'
+
+apiToken: ''

@@ -1,0 +1,20 @@
+{{- if .Values.servicemonitor.enabled }}
+kind: ServiceMonitor
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  name: keepup-service
+  labels:
+    app: keepup
+    type: backend
+spec:
+  endpoints:
+  - interval: 60s
+    path: /metrics
+    port: http
+  jobLabel: keepup-service
+  selector:
+    matchLabels:
+      app: keepup
+      type: backend
+---
+{{- end -}}

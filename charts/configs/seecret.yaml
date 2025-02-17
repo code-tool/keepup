@@ -1,0 +1,8 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: keepup-seecret
+  namespace: keepup
+data:
+  API_TOKEN: ZkJiVWVOWFo5MHFqVEd6cTBBN05XY3c=
+type: Opaque
