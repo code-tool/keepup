@@ -57,12 +57,10 @@ type KubernetesClusterMiddleware struct {
 	TTL      int
 }
 
-// ClusterDocument represents a request to store cluster data
 type ClusterDocument struct {
 	Cluster KubernetesCluster `json:"cluster"`
 }
 
-// IDDocument is used for retrieving data by ID
 type IDClusterDocument struct {
 	ID uuid.UUID `json:"id"`
 }
