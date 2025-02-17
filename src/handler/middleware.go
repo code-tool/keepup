@@ -257,7 +257,6 @@ func (s *PackageVersionsHandler) HandlePackage(w http.ResponseWriter, r *http.Re
 	}
 }
 
-// HandleKubernetesCluster processes incoming API requests
 func (s *KubernetesClusterMiddleware) HandleKubernetesCluster(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("x-api-token")
 	if token != s.ApiToken {
@@ -275,7 +274,6 @@ func (s *KubernetesClusterMiddleware) HandleKubernetesCluster(w http.ResponseWri
 	}
 }
 
-// Insert a new cluster
 func (s *KubernetesClusterMiddleware) handleInsertCluster(w http.ResponseWriter, r *http.Request) {
 	var cluster KubernetesCluster
 	body, err := io.ReadAll(r.Body)
@@ -304,18 +302,15 @@ func (s *KubernetesClusterMiddleware) handleInsertCluster(w http.ResponseWriter,
 	log.Printf("Cluster stored with ID: %s", id)
 }
 
-// handleGetClusterByID retrieves a cluster by ID
 func (s *KubernetesClusterMiddleware) handleGetClusterByID(w http.ResponseWriter, r *http.Request) {
 	var req IDClusterDocument
 
-	// Decode request JSON
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Invalid JSON request", http.StatusBadRequest)
 		return
 	}
 
-	// Retrieve cluster data using the correct method
 	cluster, err := s.Clusters.RetrieveCluster(req.ID, s.Context, s.Client)
 	if err == ErrClusterNotFound {
 		http.Error(w, "Cluster not found", http.StatusNotFound)
@@ -325,7 +320,6 @@ func (s *KubernetesClusterMiddleware) handleGetClusterByID(w http.ResponseWriter
 		return
 	}
 
-	// Respond with cluster data
 	res := ClusterDocument{Cluster: cluster}
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(res); err != nil {
