@@ -1,0 +1,10 @@
+{
+  "release": {
+    "os_id": "debian",
+    "version_codename": "bullseye",
+    "version": "11 (bullseye)",
+    "version_id": "11",
+    "data_center": "qqq",
+    "host_ip": "5.45.79.30"
+  }
+}
