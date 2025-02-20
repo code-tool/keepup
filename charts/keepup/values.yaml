@@ -1,7 +1,7 @@
 replicas: 1
 
 main:
-  image: "docker.io/sskorobohatko/keepup"
+  image: "ghcr.io/code-tool/keepup"
   tag: ""
   pullPolicy: "IfNotPresent"
 
