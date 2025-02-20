@@ -1,7 +1,8 @@
 replicas: 1
 
 main:
-  image: "docker.io/sskorobohatko/keepup:latest"
+  image: "docker.io/sskorobohatko/keepup"
+  tag: ""
   pullPolicy: "IfNotPresent"
 
 redis:

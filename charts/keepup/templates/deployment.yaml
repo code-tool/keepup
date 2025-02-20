@@ -30,7 +30,7 @@ spec:
 {{ end }}
         - name: keepup-main-container
           imagePullPolicy: {{ .Values.main.pullPolicy }}
-          image: {{ .Values.main.image | quote }}
+          image: "{{ .Values.main.image }}:{{ .Values.main.tag | default .Chart.AppVersion }}"
           env:
             {{ include "project.config" . | indent 12 }}
           readinessProbe:
