@@ -124,6 +124,7 @@ func initRouting() {
 	//http.HandleFunc("/static/ansible.tar.bz2", osReleaseHandler.HandleAnsible)
 	http.HandleFunc("/os-release", osReleaseHandler.HandleOsRelease)
 	http.HandleFunc("/package-version", PackageHandler.HandlePackage)
+	http.HandleFunc("/helm-cluster", kubeClusterHandler.HandleKubernetesCluster)
 	http.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
