@@ -23,6 +23,13 @@ spec:
                 name: keepup-service
                 port:
                   number: 80
+          - path: /helm-cluster
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: keepup-service
+                port:
+                  number: 80
           - path: /package-version
             pathType: ImplementationSpecific
             backend:
