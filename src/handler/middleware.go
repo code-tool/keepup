@@ -282,8 +282,8 @@ func (s *KubernetesClusterMiddleware) handleInsertCluster(w http.ResponseWriter,
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-
-	log.Printf("Received JSON: %s", string(body))
+	// for debug
+	//log.Printf("Received JSON: %s", string(body))
 	if err := json.Unmarshal(body, &cluster); err != nil {
 		log.Println("Failed to parse JSON:", err)
 		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
@@ -299,7 +299,7 @@ func (s *KubernetesClusterMiddleware) handleInsertCluster(w http.ResponseWriter,
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(IDClusterDocument{ID: id})
-	log.Printf("Cluster stored with ID: %s", id)
+	//log.Printf("Cluster stored with ID: %s", id)
 }
 
 func (s *KubernetesClusterMiddleware) handleGetClusterByID(w http.ResponseWriter, r *http.Request) {
