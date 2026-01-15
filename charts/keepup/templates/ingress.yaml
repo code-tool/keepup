@@ -3,10 +3,9 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: keepup-ingress
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    #nginx.ingress.kubernetes.io/service-upstream: "true"
-    #nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+  {{- if .Values.ingress.annotations }}
+  annotations: {{ toYaml .Values.ingress.annotations | nindent 4 }}
+  {{- end }}
 spec:
   tls:
     - hosts:
