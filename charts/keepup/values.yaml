@@ -31,3 +31,8 @@ annotations: {}
 #  "prometheus.io/path": '/metrics'
 
 apiToken: ''
+appEnv: prod
+redisAddr: 127.0.0.1
+redisPort: '6379'
+redisDbNo: '7'
+ttlSeconds: '21600'
