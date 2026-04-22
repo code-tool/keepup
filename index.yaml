@@ -3,6 +3,14 @@ entries:
   keepup:
   - apiVersion: v1
     appVersion: 1.2.0
+    created: "2026-04-22T09:02:38.187107249Z"
+    digest: ce392272ab9ff7f618c5cc9144bcdbbb1c0f0198e38c2748cb426d4596b2a882
+    name: keepup
+    urls:
+    - keepup-1.3.2.tgz
+    version: 1.3.2
+  - apiVersion: v1
+    appVersion: 1.2.0
     created: "2026-04-21T17:47:10.856542809Z"
     digest: f5dce8bea987fe7d345be147462e6ec038e0a40434fd1cc87886ec0a72bff79a
     name: keepup
@@ -63,4 +71,4 @@ entries:
     urls:
     - keepup-1.0.0.tgz
     version: 1.0.0
-generated: "2026-04-21T17:47:10.85657009Z"
+generated: "2026-04-22T09:02:38.187137425Z"
