@@ -8,12 +8,12 @@ metadata:
     type: backend
 spec:
   endpoints:
-  - interval: 60s
-    path: /metrics
-    port: http
-    relabelings:
-    - sourceLabels: [__meta_kubernetes_service_name]
-      targetLabel: instance
+    - interval: 60s
+      path: /metrics
+      port: http
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: instance
   jobLabel: keepup-service
   selector:
     matchLabels:
