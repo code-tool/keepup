@@ -14,6 +14,8 @@ spec:
       relabelings:
         - sourceLabels: [__meta_kubernetes_service_name]
           targetLabel: instance
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: pod
   jobLabel: keepup-service
   selector:
     matchLabels:
