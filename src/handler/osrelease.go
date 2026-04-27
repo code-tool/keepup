@@ -29,7 +29,7 @@ type OsReleases struct {
 
 var (
 	ErrInsertFailed = errors.New("Insert failed")
-	ErrMarshlFailed = errors.New("Marshal failed")
+	ErrMarshalFailed = errors.New("Marshal failed")
 	ErrIDNotFound   = errors.New("Id not found")
 	ErrNoKeysFound  = errors.New("No keys found")
 )
@@ -39,7 +39,7 @@ func (c *OsReleases) Insert(rel OsRelease, ctx context.Context, con *redis.Clien
 	rel.UpdatedAt = fmt.Sprint(time.Now().Unix())
 	srt, err := json.Marshal(rel)
 	if err != nil {
-		return rel.ID, ErrMarshlFailed
+		return rel.ID, ErrMarshalFailed
 	}
 	result, err := con.Set(ctx, fmt.Sprint(rel.ID), srt, time.Duration(ttl)*time.Second).Result()
 	if err != nil {
@@ -78,7 +78,8 @@ func (c *OsReleases) Scan(ctx context.Context, con *redis.Client) (OsReleases, e
 		}
 	}
 	if err := iter.Err(); err != nil {
-		panic(err)
+		log.Printf("Error scanning Redis keys: %v", err)
+		return rels, err
 	}
 	return rels, nil
 }

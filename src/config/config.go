@@ -46,8 +46,8 @@ func init() {
 	numFields := refl.NumField()
 	for i := 0; i < numFields; i++ {
 		envName := refl.Type().Field(i).Name
-		envVal, foud := os.LookupEnv(envName)
-		if !foud {
+		envVal, found := os.LookupEnv(envName)
+		if !found {
 			panic("Environment [" + envName + "] not found.")
 		}
 		refl.Field(i).SetString(envVal)

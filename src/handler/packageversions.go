@@ -216,21 +216,13 @@ func updateEOLCache(ctx context.Context, con *redis.Client) error {
 		"package": map[string][]EndOfLifeEntry{},
 	}
 
+	httpClient := &http.Client{Timeout: 10 * time.Second}
 	for _, packageName := range supportedPackages {
 		apiURL := fmt.Sprintf("https://endoflife.date/api/%s.json", packageName)
-		httpClient := &http.Client{Timeout: 10 * time.Second}
-
-		resp, err := httpClient.Get(apiURL)
+		entries, err := fetchEOLEntries(httpClient, apiURL)
 		if err != nil {
 			continue
 		}
-		defer resp.Body.Close()
-
-		var entries []EndOfLifeEntry
-		if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
-			continue
-		}
-
 		cacheDocument["package"].(map[string][]EndOfLifeEntry)[packageName] = entries
 	}
 
@@ -245,6 +237,20 @@ func updateEOLCache(ctx context.Context, con *redis.Client) error {
 	}
 
 	return nil
+}
+
+func fetchEOLEntries(client *http.Client, url string) ([]EndOfLifeEntry, error) {
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var entries []EndOfLifeEntry
+	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
+		return nil, err
+	}
+	return entries, nil
 }
 
 func getEOLData(ctx context.Context, con *redis.Client, packageName string) ([]EndOfLifeEntry, error) {

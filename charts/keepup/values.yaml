@@ -7,7 +7,7 @@ main:
 
 redis:
   enabled: true
-  image: "redis:8.2.3"
+  image: "redis:8.2.5"
   pullPolicy: "IfNotPresent"
 
 ingress:

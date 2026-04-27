@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"io"
 	"log"
@@ -67,7 +68,7 @@ type IDClusterDocument struct {
 
 func (s *OsReleasesMiddleware) HandleOsRelease(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("x-api-token")
-	if token != s.ApiToken {
+	if subtle.ConstantTimeCompare([]byte(token), []byte(s.ApiToken)) != 1 {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusForbidden)
 		io.WriteString(w, "FORBIDDEN")
@@ -87,6 +88,7 @@ func (s *OsReleasesMiddleware) HandleOsRelease(w http.ResponseWriter, r *http.Re
 func (s *OsReleasesMiddleware) handleInsert(w http.ResponseWriter, r *http.Request) {
 	var req ReleaseDocument
 	var res IDDocument
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -108,6 +110,7 @@ func (s *OsReleasesMiddleware) handleInsert(w http.ResponseWriter, r *http.Reque
 
 func (s *OsReleasesMiddleware) handleGetByID(w http.ResponseWriter, r *http.Request) {
 	var req IDDocument
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -161,6 +164,7 @@ func (p *PackageVersionsHandler) handleInsertPackages(w http.ResponseWriter, r *
 	var req PackageDocument
 	var res IDDocumentPackage
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
@@ -210,6 +214,7 @@ func (p *PackageVersionsHandler) handleInsertPackages(w http.ResponseWriter, r *
 func (p *PackageVersionsHandler) handleGetPackages(w http.ResponseWriter, r *http.Request) {
 	var req IDDocumentPackage
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -238,7 +243,7 @@ func (p *PackageVersionsHandler) handleGetPackages(w http.ResponseWriter, r *htt
 
 func (s *PackageVersionsHandler) HandlePackage(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("x-api-token")
-	if token != s.ApiToken {
+	if subtle.ConstantTimeCompare([]byte(token), []byte(s.ApiToken)) != 1 {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusForbidden)
 		io.WriteString(w, "FORBIDDEN")
@@ -259,7 +264,7 @@ func (s *PackageVersionsHandler) HandlePackage(w http.ResponseWriter, r *http.Re
 // Simplife new endpoint handling logic. Maybe define common handler for all endpoints.
 func (s *KubernetesClusterMiddleware) HandleKubernetesCluster(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("x-api-token")
-	if token != s.ApiToken {
+	if subtle.ConstantTimeCompare([]byte(token), []byte(s.ApiToken)) != 1 {
 		http.Error(w, "FORBIDDEN", http.StatusForbidden)
 		return
 	}
