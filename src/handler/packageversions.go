@@ -210,7 +210,7 @@ func updateEOLCache(ctx context.Context, con *redis.Client) error {
 	//TODO: Handle all related packages.
 	//Option 1: Get all data from endoflife and store in redis.
 	//Option 2: Dynamicly resolve pacakge names, but should be checked fro eof api side.
-	supportedPackages := []string{"redis", "memcached", "mongodb", "mysql", "rabbitmq", "envoy", "debian", "postgresql", "elasticsearch", "php"}
+	supportedPackages := []string{"redis", "memcached", "mongodb", "mysql", "rabbitmq", "envoy", "debian", "postgresql", "elasticsearch"}
 
 	cacheDocument := map[string]interface{}{
 		"package": map[string][]EndOfLifeEntry{},
