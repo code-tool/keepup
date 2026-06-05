@@ -3,6 +3,15 @@ entries:
   keepup:
   - apiVersion: v2
     appVersion: 1.5.0
+    created: "2026-06-05T15:22:13.981647981Z"
+    description: eondoflife.date version tracker service
+    digest: 8852048a666971595cdc18674c6882dacc706dbc826cbd0cfa27993d087e1030
+    name: keepup
+    urls:
+    - keepup-1.5.1.tgz
+    version: 1.5.1
+  - apiVersion: v2
+    appVersion: 1.5.0
     created: "2026-05-27T10:42:21.39941116Z"
     description: eondoflife.date version tracker service
     digest: 57662f7aba281e58c7c3a774d3d0054ee5d5c339437b177b9ab4b96d97c2175e
@@ -104,4 +113,4 @@ entries:
     urls:
     - keepup-1.0.0.tgz
     version: 1.0.0
-generated: "2026-05-27T10:42:21.399484078Z"
+generated: "2026-06-05T15:22:13.981752427Z"
