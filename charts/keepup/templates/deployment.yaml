@@ -22,6 +22,14 @@ spec:
         {{- toYaml .Values.annotations | nindent 8 }}
       {{- end }}
     spec:
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      {{- end }}
       containers:
 {{ if .Values.redis.enabled  }}
         - name: keepup-redis-container
