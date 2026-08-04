@@ -8,6 +8,7 @@
       "memcached": "1.6.18-1",
       "envoy": "unknown",
       "host_ip": "101.122.418.4",
-      "data_center": "aaa"
+      "data_center": "aaa",
+      "team": "platform"
     }
 }

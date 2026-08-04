@@ -14,6 +14,7 @@ var (
 	ChartName              = "chart_name"
 	ChartVersion           = "chart_version"
 	ChartNamespace         = "chart_namespace"
+	Teamcluster            = "team"
 	HelmReleaseMetricValue = float64(1)
 
 	kubernetesClusterMetricDesc = prometheus.NewDesc(
@@ -26,6 +27,7 @@ var (
 			ChartName,
 			ChartVersion,
 			ChartNamespace,
+			Teamcluster,
 		}, nil,
 	)
 )
@@ -55,6 +57,7 @@ func (kc KubernetesClusterCollector) Collect(ch chan<- prometheus.Metric) {
 				chart.ChartName,
 				chart.Version,
 				chart.Namespace,
+				cluster.Team,
 			)
 		}
 	}

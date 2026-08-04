@@ -173,7 +173,7 @@ func (p *PackageVersionsHandler) handleInsertPackages(w http.ResponseWriter, r *
 
 	cleanedPackages := make(map[string]string)
 	for key, value := range req.Packages {
-		if key != "host_ip" && key != "data_center" {
+		if key != "host_ip" && key != "data_center" && key != "team" {
 			cleanedPackages[key] = value
 		}
 	}
@@ -188,6 +188,7 @@ func (p *PackageVersionsHandler) handleInsertPackages(w http.ResponseWriter, r *
 	pkg := PackageVersions{
 		DataCenterPkg: req.Packages["data_center"],
 		HostIPPkg:     req.Packages["host_ip"],
+		Team:          req.Packages["team"],
 		Packages:      convertedPackages,
 	}
 

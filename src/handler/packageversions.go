@@ -28,6 +28,7 @@ type PackageVersions struct {
 	IDPkg         uuid.UUID                `json:"id"`
 	DataCenterPkg string                   `json:"data_center"`
 	HostIPPkg     string                   `json:"host_ip"`
+	Team          string                   `json:"team"`
 	UpdatedAt     string                   `json:"updated_at"`
 	Packages      map[string]PackageDetail `json:"packages"`
 }
