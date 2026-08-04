@@ -16,6 +16,7 @@ type KubernetesCluster struct {
 	ID          uuid.UUID       `json:"id"`
 	ClusterName string          `json:"cluster_name"` // Default value from scraper: minikube
 	KubeVersion string          `json:"kube_version"`
+	Team        string          `json:"team"`
 	HelmCharts  []HelmChartData `json:"helm_charts"`
 	UpdatedAt   string          `json:"updated_at"`
 }

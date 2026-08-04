@@ -28,6 +28,7 @@ type PackageVersions struct {
 	IDPkg         uuid.UUID                `json:"id"`
 	DataCenterPkg string                   `json:"data_center"`
 	HostIPPkg     string                   `json:"host_ip"`
+	Team          string                   `json:"team"`
 	UpdatedAt     string                   `json:"updated_at"`
 	Packages      map[string]PackageDetail `json:"packages"`
 }
@@ -210,7 +211,7 @@ func updateEOLCache(ctx context.Context, con *redis.Client) error {
 	//TODO: Handle all related packages.
 	//Option 1: Get all data from endoflife and store in redis.
 	//Option 2: Dynamicly resolve pacakge names, but should be checked fro eof api side.
-	supportedPackages := []string{"redis", "memcached", "mongodb", "mysql", "rabbitmq", "envoy", "debian", "postgresql", "elasticsearch", "php"}
+	supportedPackages := []string{"redis", "memcached", "mongodb", "mysql", "rabbitmq", "envoy", "debian", "postgresql", "elasticsearch", "php", "gitlab-runner", "linux"}
 
 	cacheDocument := map[string]interface{}{
 		"package": map[string][]EndOfLifeEntry{},

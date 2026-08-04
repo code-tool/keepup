@@ -1,0 +1,17 @@
+{
+  "cluster_name": "minikube",
+  "kube_version": "1.29.0",
+  "team": "platform",
+  "helm_charts": [
+    {
+      "chart_name": "redis",
+      "version": "18.1.5",
+      "namespace": "database"
+    },
+    {
+      "chart_name": "keepup",
+      "version": "0.5.0",
+      "namespace": "monitoring"
+    }
+  ]
+}
