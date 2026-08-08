@@ -22,6 +22,16 @@ ingress:
   #  nginx.ingress.kubernetes.io/service-upstream: "true"
   #  nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
 
+gatewayApi:
+  enabled: false
+  # parentRefs:
+  #   - name: my-gateway
+  #     namespace: gateway-system
+  #     sectionName: https
+  parentRefs: []
+  host: ""
+  annotations: {}
+
 servicemonitor:
   enabled: true
 
