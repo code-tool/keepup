@@ -5,6 +5,12 @@
       name: keepup-config
       key: APP_ENV
 
+- name: LISTEN_PORT
+  valueFrom:
+    configMapKeyRef:
+      name: keepup-config
+      key: LISTEN_PORT
+
 - name: REDIS_ADDR
   valueFrom:
     configMapKeyRef:

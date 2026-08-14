@@ -22,6 +22,9 @@ spec:
         {{- toYaml .Values.annotations | nindent 8 }}
       {{- end }}
     spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext: {{ toYaml . | nindent 8 }}
+      {{- end }}
       {{- if .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.nodeSelector | nindent 8 }}
@@ -35,15 +38,24 @@ spec:
         - name: keepup-redis-container
           imagePullPolicy: {{ .Values.redis.pullPolicy }}
           image: {{ .Values.redis.image | quote }}
+          {{- with .Values.redis.securityContext }}
+          securityContext: {{ toYaml . | nindent 12 }}
+          {{- end }}
 {{ end }}
         - name: keepup-main-container
           imagePullPolicy: {{ .Values.main.pullPolicy }}
           image: "{{ .Values.main.image }}:{{ .Values.main.tag | default .Chart.AppVersion }}"
           env:
             {{ include "project.config" . | indent 12 }}
+          {{- with .Values.main.securityContext }}
+          securityContext: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.listenPort | int }}
           readinessProbe:
             httpGet:
               path: /healthcheck
-              port: 80
+              port: http
             initialDelaySeconds: 10
             periodSeconds: 60

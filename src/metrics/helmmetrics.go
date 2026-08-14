@@ -3,6 +3,7 @@ package metrics
 import (
 	"fmt"
 	"keepup/src/handler"
+	"log"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -42,7 +43,11 @@ func (kc KubernetesClusterCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (kc KubernetesClusterCollector) Collect(ch chan<- prometheus.Metric) {
 
-	clusters, _ := kc.ClusterInfo.Clusters.ScanClusters(kc.ClusterInfo.Context, kc.ClusterInfo.Client)
+	clusters, err := kc.ClusterInfo.Clusters.ScanClusters(kc.ClusterInfo.Context, kc.ClusterInfo.Client)
+	if err != nil {
+		log.Printf("Failed to scan clusters: %v", err)
+		return
+	}
 
 	for id, cluster := range clusters.Items {
 

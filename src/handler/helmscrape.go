@@ -70,27 +70,55 @@ func (c *KubernetesClusters) RetrieveCluster(id uuid.UUID, ctx context.Context, 
 }
 
 func (c *KubernetesClusters) ScanClusters(ctx context.Context, con *redis.Client) (KubernetesClusters, error) {
-	var clusters = KubernetesClusters{
+	clusters := KubernetesClusters{
 		Items: make(map[uuid.UUID]KubernetesCluster),
 	}
 
+	var uids []uuid.UUID
+	var keys []string
 	iter := con.Scan(ctx, 0, "*", 0).Iterator()
 	for iter.Next(ctx) {
 		uid, err := uuid.Parse(iter.Val())
 		if err != nil {
 			if iter.Val() != "eol_cache:all_packages" {
 				log.Printf("Cannot parse UUID: %s, %v", iter.Val(), err)
-				continue
 			}
 			continue
 		}
-
-		clusters.Items[uid], _ = c.RetrieveCluster(uid, ctx, con)
+		uids = append(uids, uid)
+		keys = append(keys, iter.Val())
 	}
-
 	if err := iter.Err(); err != nil {
 		log.Printf("Error scanning clusters: %v", err)
+		return clusters, err
 	}
+	if len(keys) == 0 {
+		return clusters, nil
+	}
+
+	values, err := con.MGet(ctx, keys...).Result()
+	if err != nil {
+		log.Printf("Error fetching clusters: %v", err)
+		return clusters, err
+	}
+	for i, val := range values {
+		if val == nil {
+			// Key expired between SCAN and MGET.
+			continue
+		}
+		str, ok := val.(string)
+		if !ok {
+			log.Printf("Unexpected value type for key %s", keys[i])
+			continue
+		}
+		var cluster KubernetesCluster
+		if err := json.Unmarshal([]byte(str), &cluster); err != nil {
+			log.Printf("Can't unmarshal cluster %s: %v", keys[i], err)
+			continue
+		}
+		clusters.Items[uids[i]] = cluster
+	}
+
 	return clusters, nil
 }
 

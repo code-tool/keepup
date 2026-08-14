@@ -15,13 +15,6 @@ spec:
     - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: /os-release
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: keepup-service
-                port:
-                  number: 80
           - path: /helm-cluster
             pathType: ImplementationSpecific
             backend:

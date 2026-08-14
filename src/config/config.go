@@ -9,13 +9,13 @@ import (
 )
 
 type Config struct {
-	APP_ENV     string
-	API_TOKEN   string
-	LISTEN_PORT string
-	REDIS_ADDR  string
-	REDIS_PORT  string
-	REDIS_DBNO  string
-	TTL_SECONDS string
+	APP_ENV     string `env:"APP_ENV"`
+	API_TOKEN   string `env:"API_TOKEN"`
+	LISTEN_PORT string `env:"LISTEN_PORT"`
+	REDIS_ADDR  string `env:"REDIS_ADDR"`
+	REDIS_PORT  string `env:"REDIS_PORT"`
+	REDIS_DBNO  string `env:"REDIS_DBNO"`
+	TTL_SECONDS string `env:"TTL_SECONDS"`
 }
 
 var config *Config
@@ -26,26 +26,23 @@ func GetConfig() Config {
 
 func loadEnvFile() {
 	log.Println("Loading .env file.")
-	err := godotenv.Load(".env")
-	if err != nil {
+	if err := godotenv.Load(".env"); err != nil {
 		panic("Error loading .env file.")
 	}
 }
 
 func init() {
-	config = &Config{}
-	_, found := os.LookupEnv("APP_ENV")
-	if !found {
+	if _, found := os.LookupEnv("APP_ENV"); !found {
 		loadEnvFile()
 	}
-	_, found = os.LookupEnv("LISTEN_PORT")
-	if !found {
-		os.Setenv("LISTEN_PORT", "80")
+	if _, found := os.LookupEnv("LISTEN_PORT"); !found {
+		os.Setenv("LISTEN_PORT", "9101")
 	}
+
+	config = &Config{}
 	refl := reflect.ValueOf(config).Elem()
-	numFields := refl.NumField()
-	for i := 0; i < numFields; i++ {
-		envName := refl.Type().Field(i).Name
+	for i := 0; i < refl.NumField(); i++ {
+		envName := refl.Type().Field(i).Tag.Get("env")
 		envVal, found := os.LookupEnv(envName)
 		if !found {
 			panic("Environment [" + envName + "] not found.")

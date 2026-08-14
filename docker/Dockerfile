@@ -1,5 +1,5 @@
 FROM golang:1.25.12-trixie AS builder
-ARG BUILD_VERSION='v1.6.0'
+ARG BUILD_VERSION='v1.7.0'
 ENV LISTEN_PORT=9101
 WORKDIR /opt/keepup/
 COPY go.mod ./
@@ -9,13 +9,17 @@ RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X main.buildVersion=${BUILD_VERSION}" -a -installsuffix cgo -o keepup src/main.go
 
 FROM debian:trixie
+ENV LISTEN_PORT=9101
 WORKDIR /opt/keepup/
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
-  && rm -rf /var/cache/apt/archives/*
-COPY --from=builder /opt/keepup/keepup .
+  && rm -rf /var/cache/apt/archives/* \
+  && groupadd --system --gid 1000 keepup \
+  && useradd --system --uid 1000 --gid keepup --no-create-home keepup
+COPY --from=builder --chown=keepup:keepup /opt/keepup/keepup .
 
+USER 1000:1000
 EXPOSE ${LISTEN_PORT}
 CMD ["/opt/keepup/keepup"]

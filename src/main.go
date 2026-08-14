@@ -26,7 +26,6 @@ var (
 	server             *http.Server
 	shutdownWaiter     sync.WaitGroup
 	PackageHandler     *handler.PackageVersionsHandler
-	osReleaseHandler   *handler.OsReleasesMiddleware
 	kubeClusterHandler *handler.KubernetesClusterMiddleware
 	buildVersion       string
 )
@@ -46,16 +45,6 @@ func main() {
 	ttlSeconds, err := strconv.Atoi(config.GetConfig().TTL_SECONDS)
 	if err != nil {
 		log.Fatalf("Can't configure TTL_SECONDS: %v", err)
-	}
-
-	osReleaseHandler = &handler.OsReleasesMiddleware{
-		OsReleases: &handler.OsReleases{
-			Items: make(map[uuid.UUID]handler.OsRelease),
-		},
-		Context:  ctx,
-		Client:   con,
-		ApiToken: config.GetConfig().API_TOKEN,
-		TTL:      ttlSeconds,
 	}
 
 	PackageHandler = &handler.PackageVersionsHandler{
@@ -78,9 +67,6 @@ func main() {
 		TTL:      ttlSeconds,
 	}
 
-	osReleaseCollector := metrics.OsReleaseCollector{
-		RelInfo: osReleaseHandler,
-	}
 	packageCollector := metrics.PackageVersionsCollector{
 		PackageInfo: PackageHandler,
 	}
@@ -90,7 +76,6 @@ func main() {
 	}
 
 	prometheus.MustRegister(packageCollector)
-	prometheus.MustRegister(osReleaseCollector)
 	prometheus.MustRegister(HelmCollector)
 
 	shutdownWaiter.Add(1)
@@ -118,17 +103,14 @@ func configureServer() {
 
 func initSignalHandler() {
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGKILL)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 	go handleSignal(server, sigChan)
 }
 
 func initRouting() {
 	http.Handle("/metrics", promhttp.Handler())
-	//http.HandleFunc("/static/puppet.tar.bz2", osReleaseHandler.HandlePuppet)
-	//http.HandleFunc("/static/ansible.tar.bz2", osReleaseHandler.HandleAnsible)
-	http.HandleFunc("/os-release", osReleaseHandler.HandleOsRelease)
-	http.HandleFunc("/package-version", PackageHandler.HandlePackage)
-	http.HandleFunc("/helm-cluster", kubeClusterHandler.HandleKubernetesCluster)
+	http.HandleFunc("/package-version", PackageHandler.Handler())
+	http.HandleFunc("/helm-cluster", kubeClusterHandler.Handler())
 	http.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
