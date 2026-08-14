@@ -34,22 +34,6 @@ type IDDocumentPackage struct {
 	ID uuid.UUID `json:"id"`
 }
 
-type OsReleasesMiddleware struct {
-	OsReleases *OsReleases
-	Client     *redis.Client
-	Context    context.Context
-	ApiToken   string
-	TTL        int
-}
-
-type ReleaseDocument struct {
-	OsRelease OsRelease `json:"release"`
-}
-
-type IDDocument struct {
-	ID uuid.UUID `json:"id"`
-}
-
 type KubernetesClusterMiddleware struct {
 	Clusters *KubernetesClusters
 	Client   *redis.Client
@@ -66,98 +50,37 @@ type IDClusterDocument struct {
 	ID uuid.UUID `json:"id"`
 }
 
-func (s *OsReleasesMiddleware) HandleOsRelease(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("x-api-token")
-	if subtle.ConstantTimeCompare([]byte(token), []byte(s.ApiToken)) != 1 {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusForbidden)
-		io.WriteString(w, "FORBIDDEN")
-		return
-	} else {
-		switch strings.ToUpper(r.Method) {
-		case "GET":
-			w.Header().Set("Content-Type", "application/json")
-			s.handleGetByID(w, r)
-		case "PUT":
-			w.Header().Set("Content-Type", "application/json")
-			s.handleInsert(w, r)
-		}
-	}
-}
-
-func (s *OsReleasesMiddleware) handleInsert(w http.ResponseWriter, r *http.Request) {
-	var req ReleaseDocument
-	var res IDDocument
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, e := s.OsReleases.Insert(req.OsRelease, s.Context, s.Client, s.TTL)
-	if e != nil {
-		http.Error(w, e.Error(), http.StatusBadRequest)
-		return
-	}
-	res = IDDocument{ID: id}
-	err = json.NewEncoder(w).Encode(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-}
-
-func (s *OsReleasesMiddleware) handleGetByID(w http.ResponseWriter, r *http.Request) {
-	var req IDDocument
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	rel, err := s.OsReleases.Retrieve(req.ID, s.Context, s.Client)
-	if err == ErrIDNotFound {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	res := ReleaseDocument{OsRelease: rel}
-	err = json.NewEncoder(w).Encode(res)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *OsReleasesMiddleware) HandlePuppet(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/octet-stream")
-	w.Header().Add("Content-Transfer-Encoding", "binary")
-	w.Header().Add("Cache-Control", "private")
-	w.Header().Add("Content-Disposition", "attachment; filename=puppet.tar.bz2")
-	http.ServeFile(w, r, "./static/puppet.tar.bz2")
-}
-
-func (s *OsReleasesMiddleware) HandleAnsible(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/octet-stream")
-	w.Header().Add("Content-Transfer-Encoding", "binary")
-	w.Header().Add("Cache-Control", "private")
-	w.Header().Add("Content-Disposition", "attachment; filename=ansible.tar.bz2")
-	http.ServeFile(w, r, "./static/ansible.tar.bz2")
-}
-
-func (s *OsReleasesMiddleware) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, "OK")
-}
-
 func FlushBufferOnShutdown(shutdownWaiter *sync.WaitGroup) {
 	// TODO: cleanup logic
 	shutdownWaiter.Done()
+}
+
+func methodNotAllowedResponse(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusMethodNotAllowed)
+	io.WriteString(w, "METHOD NOT ALLOWED")
+}
+
+// withAuth checks the x-api-token header against apiToken, then dispatches
+// to the handler registered for the request method in methods. Every
+// dispatched handler responds with application/json.
+func withAuth(apiToken string, methods map[string]http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("x-api-token")
+		if subtle.ConstantTimeCompare([]byte(token), []byte(apiToken)) != 1 {
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusForbidden)
+			io.WriteString(w, "FORBIDDEN")
+			return
+		}
+		handlerFunc, ok := methods[strings.ToUpper(r.Method)]
+		if !ok {
+			methodNotAllowedResponse(w)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		handlerFunc(w, r)
+	}
 }
 
 func (p *PackageVersionsHandler) handleInsertPackages(w http.ResponseWriter, r *http.Request) {
@@ -242,46 +165,23 @@ func (p *PackageVersionsHandler) handleGetPackages(w http.ResponseWriter, r *htt
 	}
 }
 
-func (s *PackageVersionsHandler) HandlePackage(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("x-api-token")
-	if subtle.ConstantTimeCompare([]byte(token), []byte(s.ApiToken)) != 1 {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusForbidden)
-		io.WriteString(w, "FORBIDDEN")
-		return
-	} else {
-		switch strings.ToUpper(r.Method) {
-		case "GET":
-			w.Header().Set("Content-Type", "application/json")
-			s.handleGetPackages(w, r)
-		case "PUT":
-			w.Header().Set("Content-Type", "application/json")
-			s.handleInsertPackages(w, r)
-		}
-	}
+func (s *PackageVersionsHandler) Handler() http.HandlerFunc {
+	return withAuth(s.ApiToken, map[string]http.HandlerFunc{
+		"GET": s.handleGetPackages,
+		"PUT": s.handleInsertPackages,
+	})
 }
 
-// TODO
-// Simplife new endpoint handling logic. Maybe define common handler for all endpoints.
-func (s *KubernetesClusterMiddleware) HandleKubernetesCluster(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("x-api-token")
-	if subtle.ConstantTimeCompare([]byte(token), []byte(s.ApiToken)) != 1 {
-		http.Error(w, "FORBIDDEN", http.StatusForbidden)
-		return
-	}
-
-	switch strings.ToUpper(r.Method) {
-	case "GET":
-		w.Header().Set("Content-Type", "application/json")
-		s.handleGetClusterByID(w, r)
-	case "PUT":
-		w.Header().Set("Content-Type", "application/json")
-		s.handleInsertCluster(w, r)
-	}
+func (s *KubernetesClusterMiddleware) Handler() http.HandlerFunc {
+	return withAuth(s.ApiToken, map[string]http.HandlerFunc{
+		"GET": s.handleGetClusterByID,
+		"PUT": s.handleInsertCluster,
+	})
 }
 
 func (s *KubernetesClusterMiddleware) handleInsertCluster(w http.ResponseWriter, r *http.Request) {
 	var cluster KubernetesCluster
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Failed to read request body:", err)
@@ -327,7 +227,6 @@ func (s *KubernetesClusterMiddleware) handleGetClusterByID(w http.ResponseWriter
 	}
 
 	res := ClusterDocument{Cluster: cluster}
-	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return

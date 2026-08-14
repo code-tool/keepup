@@ -1,14 +1,32 @@
 replicas: 1
 
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
 main:
   image: "ghcr.io/code-tool/keepup"
   tag: ""
   pullPolicy: "IfNotPresent"
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
 
 redis:
   enabled: true
   image: "redis:8.2.8"
   pullPolicy: "IfNotPresent"
+  # the official redis image's built-in non-root user
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
 
 ingress:
   enabled: true
@@ -50,6 +68,7 @@ tolerations: []
 
 apiToken: ''
 appEnv: prod
+listenPort: '9101'
 redisAddr: 127.0.0.1
 redisPort: '6379'
 redisDbNo: '7'

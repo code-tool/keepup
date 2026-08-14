@@ -142,18 +142,52 @@ func (c *PackageVersionss) Retrieve(id uuid.UUID, ctx context.Context, con *redi
 }
 
 func (c *PackageVersionss) Scan(ctx context.Context, con *redis.Client) (PackageVersionss, error) {
-	var pkgs = PackageVersionss{
+	pkgs := PackageVersionss{
 		Items: make(map[uuid.UUID]PackageVersions),
 	}
 
+	var uids []uuid.UUID
+	var keys []string
 	iter := con.Scan(ctx, 0, "*", 0).Iterator()
 	for iter.Next(ctx) {
 		uid, err := uuid.Parse(iter.Val())
 		if err != nil {
 			continue
 		}
-		pkgs.Items[uid], _ = c.Retrieve(uid, ctx, con)
+		uids = append(uids, uid)
+		keys = append(keys, iter.Val())
 	}
+	if err := iter.Err(); err != nil {
+		log.Printf("Error scanning Redis keys: %v", err)
+		return pkgs, err
+	}
+	if len(keys) == 0 {
+		return pkgs, nil
+	}
+
+	values, err := con.MGet(ctx, keys...).Result()
+	if err != nil {
+		log.Printf("Error fetching Redis keys: %v", err)
+		return pkgs, err
+	}
+	for i, val := range values {
+		if val == nil {
+			// Key expired between SCAN and MGET.
+			continue
+		}
+		str, ok := val.(string)
+		if !ok {
+			log.Printf("Unexpected value type for key %s", keys[i])
+			continue
+		}
+		var pkg PackageVersions
+		if err := json.Unmarshal([]byte(str), &pkg); err != nil {
+			log.Printf("Can't unmarshal package %s: %v", keys[i], err)
+			continue
+		}
+		pkgs.Items[uids[i]] = pkg
+	}
+
 	return pkgs, nil
 }
 
@@ -293,18 +327,24 @@ func getEOLData(ctx context.Context, con *redis.Client, packageName string) ([]E
 }
 
 func isVersionExpired(current, newest string) bool {
-	parseVersion := func(version string) (int, int) {
+	parseVersion := func(label, version string) (int, int) {
 		segments := strings.Split(version, ".")
-		major, _ := strconv.Atoi(segments[0])
+		major, err := strconv.Atoi(segments[0])
+		if err != nil {
+			log.Printf("Can't parse %s version major segment %q: %v", label, version, err)
+		}
 		minor := 0
 		if len(segments) > 1 {
-			minor, _ = strconv.Atoi(segments[1])
+			minor, err = strconv.Atoi(segments[1])
+			if err != nil {
+				log.Printf("Can't parse %s version minor segment %q: %v", label, version, err)
+			}
 		}
 		return major, minor
 	}
 
-	currentMajor, currentMinor := parseVersion(current)
-	newestMajor, newestMinor := parseVersion(newest)
+	currentMajor, currentMinor := parseVersion("current", current)
+	newestMajor, newestMinor := parseVersion("newest", newest)
 
 	if currentMajor < newestMajor {
 		return true

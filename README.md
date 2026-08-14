@@ -1,6 +1,6 @@
 # keepup
 
-A lightweight Prometheus exporter that collects infrastructure inventory pushed by remote agents - OS releases, package versions (with end-of-life enrichment), and Kubernetes/Helm deployments - and exposes it as metrics.
+A lightweight Prometheus exporter that collects infrastructure inventory pushed by remote agents - package versions (with end-of-life enrichment) and Kubernetes/Helm deployments - and exposes it as metrics.
 
 `keepup` holds no state of its own: Redis is both the write buffer and the read source. Agents `PUT` JSON, `keepup` validates and stores it with a TTL, and Prometheus scrapes `/metrics` on demand.
 
@@ -10,7 +10,6 @@ A lightweight Prometheus exporter that collects infrastructure inventory pushed 
 - [Quick start](#quick-start)
 - [Configuration](#configuration)
 - [API](#api)
-  - [`PUT /os-release`](#put-os-release)
   - [`PUT /package-version`](#put-package-version)
   - [`PUT /helm-cluster`](#put-helm-cluster)
 - [Metrics](#metrics)
@@ -22,18 +21,16 @@ A lightweight Prometheus exporter that collects infrastructure inventory pushed 
 
 ```
  agent(s)                    keepup                        Prometheus
-┌─────────┐   PUT + token   ┌───────────────────┐  scrape  ┌────────────┐
-│ os-info │ ───────────────>│ handler ──▶ Redis  │<────────│ /metrics   │
-│ pkg-vers│                 │           (TTL)    │          │            │
-│ helm    │                 └───────────────────┘          └────────────┘
-└─────────┘
+-----------   PUT + token   ---------------------  scrape  --------------
+│ pkg-vers│ --------------->│ handler --> Redis │<---------│ /metrics   |
+│ helm    │                 │           (TTL)   │          │            │
+-----------                 ---------------------          --------------
 ```
 
 Every data domain follows the same shape:
 
 | Domain | Endpoint | Redis key | Metric |
 |---|---|---|---|
-| OS release *(deprecated)* | `PUT /os-release` | SHA1 of `{data_center}-{host_ip}` | `os_release_info` |
 | Package versions | `PUT /package-version` | SHA1 of `{data_center}-{host_ip}-PACKAGE_UUID` | `package_version_info` |
 | Kubernetes / Helm | `PUT /helm-cluster` | SHA1 of `{cluster_name}` | `kubernetes_cluster_info` |
 
@@ -58,7 +55,7 @@ docker build -f docker/Dockerfile -t keepup .
 
 The server listens on `LISTEN_PORT` (default `9101` in dev) and exposes:
 
-- `PUT`/`GET /os-release`, `/package-version`, `/helm-cluster` - data ingestion & lookup (require `x-api-token`)
+- `PUT`/`GET /package-version`, `/helm-cluster` - data ingestion & lookup (require `x-api-token`)
 - `GET /metrics` - Prometheus scrape endpoint (no auth)
 - `GET /healthcheck` - liveness probe
 
@@ -79,23 +76,6 @@ Config is loaded from environment variables. If `APP_ENV` is unset, `keepup` loa
 ## API
 
 All data endpoints require an `x-api-token` header matching `API_TOKEN`, and accept both `PUT` (insert) and `GET` (lookup by `id`).
-
-### `PUT /os-release`
-
-> **Deprecated** - kept for backwards compatibility, no longer receiving new fields (e.g. `team`). Do not build new integrations against it.
-
-```jsonc
-{
-  "release": {
-    "os_id": "debian",
-    "version_codename": "bullseye",
-    "version": "11 (bullseye)",
-    "version_id": "11",
-    "data_center": "aaa",
-    "host_ip": "101.122.418.4"
-  }
-}
-```
 
 ### `PUT /package-version`
 
@@ -135,13 +115,18 @@ Unlike the other two endpoints, the request body maps directly onto the stored s
 
 | Metric | Labels |
 |---|---|
-| `os_release_info` *(deprecated)* | `id`, `os_id`, `version_codename`, `version`, `version_id`, `data_center`, `host_ip` |
 | `package_version_info` | `id`, `package_name`, `current_version`, `current_version_eof`, `newest_version`, `expired`, `data_center`, `host_ip`, `team` |
 | `kubernetes_cluster_info` | `id`, `cluster_name`, `kube_version`, `chart_name`, `chart_version`, `chart_namespace`, `team` |
 
 ## Testing
 
-There are no unit tests - only an end-to-end shell script that exercises all three endpoints against a running server:
+Unit tests cover the handler package against an in-process fake Redis ([`miniredis`](https://github.com/alicebob/miniredis)) - no external services required:
+
+```bash
+go test ./...
+```
+
+An end-to-end shell script also exercises both endpoints against a running server:
 
 ```bash
 # start the server first (see Quick start), then:

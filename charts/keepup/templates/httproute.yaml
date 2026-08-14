@@ -17,9 +17,6 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /os-release
-        - path:
-            type: PathPrefix
             value: /helm-cluster
         - path:
             type: PathPrefix
