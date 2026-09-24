@@ -36,7 +36,7 @@ Every data domain follows the same shape:
 
 On each scrape, the collector `SCAN`s all Redis keys for the domain, deserializes every entry, and emits one Prometheus metric per entity - there is no in-memory cache, so every scrape hits Redis directly.
 
-**Package EOL enrichment**: every `package-version` push is checked against `endoflife.date`, cached in Redis for 7 days under `eol_cache:all_packages`. Supported packages: `redis`, `memcached`, `mongodb`, `mysql`, `rabbitmq`, `envoy`, `debian`, `postgresql`, `elasticsearch`, `php`. Versions are compared as `major.minor` only (Debian epoch prefixes like `5:7.0.15-1~deb12u1` are stripped down to `7.0`).
+**Package EOL enrichment**: every `package-version` push is checked against `endoflife.date`, cached in Redis for 7 days under `eol_cache:all_packages`. Supported packages: `redis`, `memcached`, `mongodb`, `mysql`, `rabbitmq`, `envoy`, `debian`, `postgresql`, `elasticsearch`, `php`, `gitlab-runner`, `linux`, `openbao`, `metallb`, `authentik`, `argo-cd`. Versions are compared as `major.minor` only (Debian epoch prefixes like `5:7.0.15-1~deb12u1` are stripped down to `7.0`).
 
 ## Quick start
 
@@ -113,10 +113,10 @@ Unlike the other two endpoints, the request body maps directly onto the stored s
 
 ## Metrics
 
-| Metric | Labels |
-|---|---|
-| `package_version_info` | `id`, `package_name`, `current_version`, `current_version_eof`, `newest_version`, `expired`, `data_center`, `host_ip`, `team` |
-| `kubernetes_cluster_info` | `id`, `cluster_name`, `kube_version`, `chart_name`, `chart_version`, `chart_namespace`, `team` |
+| Metric | Labels                                                                                                                                    |
+|---|-------------------------------------------------------------------------------------------------------------------------------------------|
+| `package_version_info` | `id`, `package_name`, `current_version`, `current_version_eof`, `newest_version`, `expired`, `data_center`, `host_ip`, `team`             |
+| `kubernetes_cluster_info` | `id`, `cluster_name`, `kube_version`, `chart_name`, `chart_version`, `chart_namespace`, `current_version_eof`, `newest_version`, `expired`, `team` |
 
 ## Testing
 
