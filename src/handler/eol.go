@@ -37,6 +37,10 @@ func fetchEOLEntries(client *http.Client, url string) ([]EndOfLifeEntry, error) 
 }
 
 func isVersionExpired(current, newest string) bool {
+	if newest == "unknown" {
+		return false
+	}
+
 	parseVersion := func(label, version string) (int, int) {
 		segments := strings.Split(version, ".")
 		major, err := strconv.Atoi(segments[0])
