@@ -13,9 +13,12 @@ var (
 	ClusterName            = "cluster_name"
 	KubeVersion            = "kube_version"
 	ChartName              = "chart_name"
-	ChartVersion           = "chart_version"
 	ChartNamespace         = "chart_namespace"
-	Teamcluster            = "team"
+	ChartVersion           = "chart_version"
+	ChartVersionEoF        = "chart_version_eof"
+	ChartNewestVersion     = "chart_newest_version"
+	ChartVersionExpired    = "expired"
+	TeamCluster            = "team"
 	HelmReleaseMetricValue = float64(1)
 
 	kubernetesClusterMetricDesc = prometheus.NewDesc(
@@ -26,9 +29,12 @@ var (
 			ClusterName,
 			KubeVersion,
 			ChartName,
-			ChartVersion,
 			ChartNamespace,
-			Teamcluster,
+			ChartVersion,
+			ChartVersionEoF,
+            ChartNewestVersion,
+            ChartVersionExpired,
+            TeamCluster,
 		}, nil,
 	)
 )
@@ -60,9 +66,12 @@ func (kc KubernetesClusterCollector) Collect(ch chan<- prometheus.Metric) {
 				cluster.ClusterName,
 				cluster.KubeVersion,
 				chart.ChartName,
-				chart.Version,
-				chart.Namespace,
-				cluster.Team,
+				chart.ChartNamespace,
+				chart.ChartVersion,
+				chart.ChartVersionEoF,
+                chart.ChartNewestVersion,
+                fmt.Sprintf("%t", chart.ChartVersionExpired),
+				cluster.TeamCluster,
 			)
 		}
 	}

@@ -3,9 +3,14 @@ package handler
 import (
 	"context"
 	"testing"
+	"errors"
 
 	"github.com/google/uuid"
 )
+
+func mockQueryFunc(string) (string, string, error) {
+    return "1.0", "", nil
+}
 
 func TestUUIDFromClusterName_Deterministic(t *testing.T) {
 	a := UUIDFromClusterName("minikube")
@@ -28,7 +33,7 @@ func TestClusterInsertAndRetrieve(t *testing.T) {
 	con := newTestClient(t)
 	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
 
-	id, err := c.InsertClusterData(KubernetesCluster{ClusterName: "minikube", KubeVersion: "1.30"}, ctx, con, 60)
+	id, err := c.InsertClusterData(KubernetesCluster{ClusterName: "minikube", KubeVersion: "1.30"}, ctx, con, mockQueryFunc, 60)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -39,6 +44,86 @@ func TestClusterInsertAndRetrieve(t *testing.T) {
 	}
 	if stored.ClusterName != "minikube" {
 		t.Errorf("expected cluster_name %q, got %q", "minikube", stored.ClusterName)
+	}
+}
+
+func TestClusterInsertAndRetrieve_ChartVersionEoF(t *testing.T) {
+    ctx := context.Background()
+    con := newTestClient(t)
+    c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
+
+    queryFunc := func(chartName string) (string, string, error) {
+        return "7.2.0", "2026-01-01", nil
+    }
+
+    cluster := KubernetesCluster{
+        ClusterName: "minikube",
+        HelmCharts: []HelmChartData{
+            {
+                ChartName:    "redis",
+                ChartVersion: "7.1.0",
+            },
+        },
+    }
+
+    id, err := c.InsertClusterData(cluster, ctx, con, queryFunc, 60)
+    if err != nil {
+        t.Fatalf("unexpected error: %v", err)
+    }
+
+    stored, err := c.RetrieveCluster(id, ctx, con)
+    if err != nil {
+        t.Fatalf("unexpected error retrieving inserted cluster: %v", err)
+    }
+
+    if stored.HelmCharts[0].ChartVersionEoF != "2026-01-01" {
+        t.Errorf("expected ChartVersionEoF %q, got %q", "2026-01-01", stored.HelmCharts[0].ChartVersionEoF)
+    }
+
+    if !stored.HelmCharts[0].ChartVersionExpired {
+    	t.Errorf("expected ChartVersionExpired to be true")
+    }
+}
+
+func TestClusterInsertAndRetrieve_ChartVersionEoF_QueryError(t *testing.T) {
+	ctx := context.Background()
+	con := newTestClient(t)
+	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
+
+	queryFunc := func(chartName string) (string, string, error) {
+		return "", "", errors.New("EOL API error")
+	}
+
+	cluster := KubernetesCluster{
+		ClusterName: "minikube",
+		HelmCharts: []HelmChartData{
+			{
+				ChartName:    "redis",
+				ChartVersion: "7.1.0",
+			},
+		},
+	}
+
+	id, err := c.InsertClusterData(cluster, ctx, con, queryFunc, 60)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	stored, err := c.RetrieveCluster(id, ctx, con)
+	if err != nil {
+		t.Fatalf("unexpected error retrieving inserted cluster: %v", err)
+	}
+
+	if stored.HelmCharts[0].ChartVersionEoF != "false" {
+		t.Errorf("expected ChartVersionEoF %q, got %q", "false", stored.HelmCharts[0].ChartVersionEoF)
+	}
+
+	if stored.HelmCharts[0].ChartNewestVersion != "unknown" {
+		t.Errorf("expected ChartNewestVersion %q, got %q", "unknown", stored.HelmCharts[0].ChartNewestVersion)
+	}
+
+	if stored.HelmCharts[0].ChartVersionExpired {
+		t.Errorf("expected ChartVersionExpired to be false")
 	}
 }
 
@@ -62,11 +147,11 @@ func TestClusterScan_ReturnsAllInsertedClusters(t *testing.T) {
 	con := newTestClient(t)
 	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
 
-	first, err := c.InsertClusterData(KubernetesCluster{ClusterName: "cluster-a"}, ctx, con, 60)
+	first, err := c.InsertClusterData(KubernetesCluster{ClusterName: "cluster-a"}, ctx, con, mockQueryFunc, 60)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	second, err := c.InsertClusterData(KubernetesCluster{ClusterName: "cluster-b"}, ctx, con, 60)
+	second, err := c.InsertClusterData(KubernetesCluster{ClusterName: "cluster-b"}, ctx, con, mockQueryFunc, 60)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -91,7 +176,7 @@ func TestClusterScan_SkipsCorruptAndNonUUIDEntries(t *testing.T) {
 	con := newTestClient(t)
 	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
 
-	good, err := c.InsertClusterData(KubernetesCluster{ClusterName: "cluster-a"}, ctx, con, 60)
+	good, err := c.InsertClusterData(KubernetesCluster{ClusterName: "cluster-a"}, ctx, con, mockQueryFunc, 60)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -126,5 +211,18 @@ func TestClusterScan_EmptyDatabase(t *testing.T) {
 	}
 	if len(result.Items) != 0 {
 		t.Fatalf("expected no items in an empty database, got %d", len(result.Items))
+	}
+}
+
+func TestIsVersionExpired(t *testing.T) {
+	currentVersions := []string{"7.1", "7.2", "7.3", "invalid",}
+	newestVersions := []string{"7.2", "unknown", "invalid",}
+
+	for _, current := range currentVersions {
+		isVersionExpired(current, "7.2")
+	}
+
+	for _, newest := range newestVersions {
+		isVersionExpired("7.2", newest)
 	}
 }
