@@ -2,14 +2,14 @@ package handler
 
 import (
 	"context"
-	"testing"
 	"errors"
+	"testing"
 
 	"github.com/google/uuid"
 )
 
 func mockQueryFunc(string) (string, string, error) {
-    return "1.0", "", nil
+	return "1.0", "", nil
 }
 
 func TestUUIDFromClusterName_Deterministic(t *testing.T) {
@@ -48,41 +48,41 @@ func TestClusterInsertAndRetrieve(t *testing.T) {
 }
 
 func TestClusterInsertAndRetrieve_ChartVersionEoF(t *testing.T) {
-    ctx := context.Background()
-    con := newTestClient(t)
-    c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
+	ctx := context.Background()
+	con := newTestClient(t)
+	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
 
-    queryFunc := func(chartName string) (string, string, error) {
-        return "7.2.0", "2026-01-01", nil
-    }
+	queryFunc := func(chartName string) (string, string, error) {
+		return "7.2.0", "2026-01-01", nil
+	}
 
-    cluster := KubernetesCluster{
-        ClusterName: "minikube",
-        HelmCharts: []HelmChartData{
-            {
-                ChartName:    "redis",
-                ChartVersion: "7.1.0",
-            },
-        },
-    }
+	cluster := KubernetesCluster{
+		ClusterName: "minikube",
+		HelmCharts: []HelmChartData{
+			{
+				ChartName:    "redis",
+				ChartVersion: "7.1.0",
+			},
+		},
+	}
 
-    id, err := c.InsertClusterData(cluster, ctx, con, queryFunc, 60)
-    if err != nil {
-        t.Fatalf("unexpected error: %v", err)
-    }
+	id, err := c.InsertClusterData(cluster, ctx, con, queryFunc, 60)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
-    stored, err := c.RetrieveCluster(id, ctx, con)
-    if err != nil {
-        t.Fatalf("unexpected error retrieving inserted cluster: %v", err)
-    }
+	stored, err := c.RetrieveCluster(id, ctx, con)
+	if err != nil {
+		t.Fatalf("unexpected error retrieving inserted cluster: %v", err)
+	}
 
-    if stored.HelmCharts[0].ChartVersionEoF != "2026-01-01" {
-        t.Errorf("expected ChartVersionEoF %q, got %q", "2026-01-01", stored.HelmCharts[0].ChartVersionEoF)
-    }
+	if stored.HelmCharts[0].ChartVersionEoF != "2026-01-01" {
+		t.Errorf("expected ChartVersionEoF %q, got %q", "2026-01-01", stored.HelmCharts[0].ChartVersionEoF)
+	}
 
-    if !stored.HelmCharts[0].ChartVersionExpired {
-    	t.Errorf("expected ChartVersionExpired to be true")
-    }
+	if !stored.HelmCharts[0].ChartVersionExpired {
+		t.Errorf("expected ChartVersionExpired to be true")
+	}
 }
 
 func TestClusterInsertAndRetrieve_ChartVersionEoF_QueryError(t *testing.T) {
@@ -215,8 +215,8 @@ func TestClusterScan_EmptyDatabase(t *testing.T) {
 }
 
 func TestIsVersionExpired(t *testing.T) {
-	currentVersions := []string{"7.1", "7.2", "7.3", "invalid",}
-	newestVersions := []string{"7.2", "unknown", "invalid",}
+	currentVersions := []string{"7.1", "7.2", "7.3", "invalid"}
+	newestVersions := []string{"7.2", "unknown", "invalid"}
 
 	for _, current := range currentVersions {
 		isVersionExpired(current, "7.2")

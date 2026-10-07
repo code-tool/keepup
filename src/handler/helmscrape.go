@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,47 +41,47 @@ var (
 )
 
 func (c *KubernetesClusters) InsertClusterData(
-    cluster KubernetesCluster,
-    ctx context.Context,
-    con *redis.Client,
-    queryFunc func(string) (string, string, error),
-    ttl int,
+	cluster KubernetesCluster,
+	ctx context.Context,
+	con *redis.Client,
+	queryFunc func(string) (string, string, error),
+	ttl int,
 ) (uuid.UUID, error) {
 
 	updatedHelmCharts := make([]HelmChartData, 0, len(cluster.HelmCharts))
 
-    for _, helmChart := range cluster.HelmCharts {
-        if helmChart.ChartVersion == "unknown" || helmChart.ChartVersion == "" {
-            continue
-        }
+	for _, helmChart := range cluster.HelmCharts {
+		if helmChart.ChartVersion == "unknown" || helmChart.ChartVersion == "" {
+			continue
+		}
 
-        version := extractMajorMinor(helmChart.ChartVersion)
+		version := extractMajorMinor(helmChart.ChartVersion)
 
-        latestVersion, eolDate, err := queryFunc(helmChart.ChartName)
-        if err != nil {
-            log.Printf("Failed to query EOL for Helm chart %s: %v", helmChart.ChartName, err)
-            latestVersion = "unknown"
-        } else {
-            latestVersion = extractMajorMinor(latestVersion)
-        }
+		latestVersion, eolDate, err := queryFunc(helmChart.ChartName)
+		if err != nil {
+			log.Printf("Failed to query EOL for Helm chart %s: %v", helmChart.ChartName, err)
+			latestVersion = "unknown"
+		} else {
+			latestVersion = extractMajorMinor(latestVersion)
+		}
 
-        if eolDate == "" {
-            eolDate = "false"
-        }
+		if eolDate == "" {
+			eolDate = "false"
+		}
 
-        expired := isVersionExpired(version, latestVersion)
+		expired := isVersionExpired(version, latestVersion)
 
-        updatedHelmCharts = append(updatedHelmCharts, HelmChartData{
-            ChartName:           helmChart.ChartName,
-            ChartVersion:        version,
-            ChartNamespace:      helmChart.ChartNamespace,
-            ChartVersionEoF:     eolDate,
-            ChartNewestVersion:  latestVersion,
-            ChartVersionExpired: expired,
-        })
-    }
+		updatedHelmCharts = append(updatedHelmCharts, HelmChartData{
+			ChartName:           helmChart.ChartName,
+			ChartVersion:        version,
+			ChartNamespace:      helmChart.ChartNamespace,
+			ChartVersionEoF:     eolDate,
+			ChartNewestVersion:  latestVersion,
+			ChartVersionExpired: expired,
+		})
+	}
 
-    cluster.HelmCharts = updatedHelmCharts
+	cluster.HelmCharts = updatedHelmCharts
 
 	cluster.ID = UUIDFromClusterName(cluster.ClusterName)
 	cluster.UpdatedAt = fmt.Sprint(time.Now().Unix())
@@ -125,7 +124,7 @@ func (c *KubernetesClusters) ScanClusters(ctx context.Context, con *redis.Client
 	for iter.Next(ctx) {
 		uid, err := uuid.Parse(iter.Val())
 		if err != nil {
-			if iter.Val() != "eol_cache:all_packages" {
+			if iter.Val() != eolCacheKey {
 				log.Printf("Cannot parse UUID: %s, %v", iter.Val(), err)
 			}
 			continue
@@ -171,123 +170,4 @@ func (c *KubernetesClusters) ScanClusters(ctx context.Context, con *redis.Client
 // Add more uniqe values to identife entity. To prevent names overlaping for different projects.
 func UUIDFromClusterName(clusterName string) uuid.UUID {
 	return uuid.NewSHA1(uuid.NameSpaceDNS, []byte(clusterName))
-}
-
-func queryHelmChartEndOfLifeAPI(chartName string, ctx context.Context, con *redis.Client) (string, string, error) {
-    response, err := getHelmChartEOLData(ctx, con, chartName)
-    if err != nil {
-        if err := updateHelmChartEOLCache(ctx, con); err != nil {
-            return "", "", fmt.Errorf("failed to update Helm chart cache: %w", err)
-        }
-        response, err = getHelmChartEOLData(ctx, con, chartName)
-        if err != nil {
-            return "", "", fmt.Errorf("failed to retrieve updated Helm chart cache for %s: %w", chartName, err)
-        }
-    }
-
-    latestVersion := "unknown"
-    eolDate := "false"
-
-    for _, entry := range response {
-        if entry.Cycle == chartName {
-            latestVersion = extractMajorMinor(entry.Latest)
-            eolDate = string(entry.EOL)
-            break
-        }
-    }
-
-    if latestVersion == "unknown" && len(response) > 0 {
-        latestVersion = extractMajorMinor(response[0].Latest)
-        eolDate = string(response[0].EOL)
-    }
-
-    return latestVersion, eolDate, nil
-}
-
-func updateHelmChartEOLCache(ctx context.Context, con *redis.Client) error {
-	key := "eol_cache:all_packages"
-	ttl := 7 * 24 * time.Hour
-
-	supportedHelmCharts := []string{
-        "redis",
-        "memcached",
-        "mongodb",
-        "mysql",
-        "rabbitmq",
-        "envoy",
-        "debian",
-        "postgresql",
-        "elasticsearch",
-        "php",
-        "gitlab-runner",
-        "linux",
-        "openbao",
-        "metallb",
-        "authentik",
-        "argo-cd",
-    }
-
-	cacheDocument := map[string]interface{}{
-		"helm_chart": map[string][]EndOfLifeEntry{},
-	}
-
-	httpClient := &http.Client{Timeout: 10 * time.Second}
-	for _, chartName := range supportedHelmCharts {
-		apiURL := fmt.Sprintf("https://endoflife.date/api/%s.json", chartName)
-		entries, err := fetchEOLEntries(httpClient, apiURL)
-		if err != nil {
-			continue
-		}
-		cacheDocument["helm_chart"].(map[string][]EndOfLifeEntry)[chartName] = entries
-	}
-
-	data, err := json.Marshal(cacheDocument)
-	if err != nil {
-		return fmt.Errorf("failed to marshal updated Helm chart cache: %w", err)
-	}
-
-	err = con.Set(ctx, key, data, ttl).Err()
-	if err != nil {
-		return fmt.Errorf("failed to update Helm chart cache in Redis: %w", err)
-	}
-
-	return nil
-}
-
-func getHelmChartEOLData(ctx context.Context, con *redis.Client, chartName string) ([]EndOfLifeEntry, error) {
-	key := "eol_cache:all_packages"
-
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	cachedData, err := con.Get(ctxWithTimeout, key).Result()
-	if err == redis.Nil {
-		return nil, fmt.Errorf("cache miss")
-	} else if err != nil {
-		return nil, fmt.Errorf("failed to fetch cache: %w", err)
-	}
-
-	var cacheDocument map[string]interface{}
-	if err := json.Unmarshal([]byte(cachedData), &cacheDocument); err != nil {
-		return nil, fmt.Errorf("failed to parse cached data: %w", err)
-	}
-
-	helmCharts, ok := cacheDocument["helm_chart"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid cache format: missing 'helm_chart' key")
-	}
-
-	rawData, exists := helmCharts[chartName]
-	if !exists {
-		return nil, fmt.Errorf("no data found for Helm chart: %s", chartName)
-	}
-
-	rawBytes, _ := json.Marshal(rawData)
-	var result []EndOfLifeEntry
-
-	if err := json.Unmarshal(rawBytes, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal raw Helm chart data: %w", err)
-	}
-
-	return result, nil
 }
