@@ -268,15 +268,36 @@ func TestClusterScan_EmptyDatabase(t *testing.T) {
 	}
 }
 
-func TestIsVersionExpired(t *testing.T) {
-	currentVersions := []string{"7.1", "7.2", "7.3", "invalid"}
-	newestVersions := []string{"7.2", "unknown", "invalid"}
+// An older release that is still supported must not be reported as expired.
+func TestClusterInsertAndRetrieve_NotExpiredWhileSupported(t *testing.T) {
+	ctx := context.Background()
+	con := newTestClient(t)
+	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
 
-	for _, current := range currentVersions {
-		isVersionExpired(current, "7.2")
+	queryFunc := func(chartName, version string) (string, string, error) {
+		return "8.10.2", "2099-01-01", nil
 	}
 
-	for _, newest := range newestVersions {
-		isVersionExpired("7.2", newest)
+	cluster := KubernetesCluster{
+		ClusterName: "minikube",
+		HelmCharts:  []HelmChartData{{ChartName: "redis", ChartVersion: "8.8.1"}},
+	}
+
+	id, err := c.InsertClusterData(cluster, ctx, con, queryFunc, 60)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	stored, err := c.RetrieveCluster(id, ctx, con)
+	if err != nil {
+		t.Fatalf("unexpected error retrieving inserted cluster: %v", err)
+	}
+
+	got := stored.HelmCharts[0]
+	if got.ChartNewestVersion != "8.10" {
+		t.Errorf("expected ChartNewestVersion %q, got %q", "8.10", got.ChartNewestVersion)
+	}
+	if got.ChartVersionExpired {
+		t.Errorf("expected a supported older release not to be expired")
 	}
 }

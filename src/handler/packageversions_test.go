@@ -129,3 +129,45 @@ func TestPackageVersionsScan_EmptyDatabase(t *testing.T) {
 		t.Fatalf("expected no items in an empty database, got %d", len(result.Items))
 	}
 }
+
+func TestPackageVersionsInsert_ExpiredFollowsEOLDate(t *testing.T) {
+	ctx := context.Background()
+	con := newTestClient(t)
+	c := &PackageVersionss{Items: make(map[uuid.UUID]PackageVersions)}
+
+	eolByVersion := map[string]string{
+		"8.8.1":  "2099-01-01", // older than newest, still supported
+		"7.2.4":  "2025-02-28", // past EOL
+		"8.10.2": "false",      // newest, no EOL announced
+	}
+	queryFunc := func(name, version string) (string, string, error) {
+		return "8.10.2", eolByVersion[version], nil
+	}
+
+	pkg := PackageVersions{
+		DataCenterPkg: "dc1",
+		HostIPPkg:     "10.0.0.1",
+		Packages: map[string]PackageDetail{
+			"supported": {CurrentVersion: "8.8.1"},
+			"eol":       {CurrentVersion: "7.2.4"},
+			"newest":    {CurrentVersion: "8.10.2"},
+		},
+	}
+
+	id, err := c.Insert(pkg, ctx, con, queryFunc, 60)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	stored, err := c.Retrieve(id, ctx, con)
+	if err != nil {
+		t.Fatalf("unexpected error retrieving inserted package: %v", err)
+	}
+
+	want := map[string]bool{"supported": false, "eol": true, "newest": false}
+	for name, expired := range want {
+		if got := stored.Packages[name].Expired; got != expired {
+			t.Errorf("%s: expected expired=%t, got %t", name, expired, got)
+		}
+	}
+}

@@ -17,7 +17,6 @@ var (
 	Expired           = "expired"
 	DataCenterpkg     = "data_center"
 	HostIPpkg         = "host_ip"
-	Teampkg           = "team"
 
 	packageMetricDesc = prometheus.NewDesc(
 		"package_version_info",
@@ -31,7 +30,7 @@ var (
 			Expired,
 			DataCenterpkg,
 			HostIPpkg,
-			Teampkg,
+			Team,
 		}, nil,
 	)
 )

@@ -185,3 +185,27 @@ func TestQueryEndOfLifeAPI_EOLComesFromInstalledCycle(t *testing.T) {
 		})
 	}
 }
+
+func TestIsEOLReached(t *testing.T) {
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+
+	cases := []struct {
+		eol  string
+		want bool
+	}{
+		{"true", true},
+		{"false", false},
+		{"unknown", false},
+		{"", false},
+		{"2025-02-28", true},
+		{"2026-10-07", true},
+		{"2026-10-08", false},
+		{"not-a-date", false},
+	}
+
+	for _, tc := range cases {
+		if got := isEOLReached(tc.eol, now); got != tc.want {
+			t.Errorf("isEOLReached(%q) = %t, want %t", tc.eol, got, tc.want)
+		}
+	}
+}

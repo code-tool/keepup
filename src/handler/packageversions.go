@@ -96,7 +96,7 @@ func (c *PackageVersionss) Insert(
 			eolDate = "false"
 		}
 
-		expired := isVersionExpired(currentVersion, latestVersion)
+		expired := isEOLReached(eolDate, time.Now())
 
 		updatedPackages[name] = PackageDetail{
 			CurrentVersion:    currentVersion,
