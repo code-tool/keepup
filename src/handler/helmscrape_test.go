@@ -83,6 +83,60 @@ func TestClusterInsertAndRetrieve_ChartVersionEoF(t *testing.T) {
 	if !stored.HelmCharts[0].ChartVersionExpired {
 		t.Errorf("expected ChartVersionExpired to be true")
 	}
+
+	if stored.HelmCharts[0].ChartVersion != "7.1.0" {
+		t.Errorf("expected full ChartVersion %q, got %q", "7.1.0", stored.HelmCharts[0].ChartVersion)
+	}
+}
+
+func TestClusterInsertAndRetrieve_KeepsChartsWithoutVersion(t *testing.T) {
+	ctx := context.Background()
+	con := newTestClient(t)
+	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
+
+	queried := 0
+	queryFunc := func(chartName string) (string, string, error) {
+		queried++
+		return "7.2.0", "2026-01-01", nil
+	}
+
+	cluster := KubernetesCluster{
+		ClusterName: "minikube",
+		HelmCharts: []HelmChartData{
+			{ChartName: "redis", ChartVersion: "", ChartNamespace: "database"},
+			{ChartName: "keepup", ChartVersion: "unknown", ChartNamespace: "monitoring"},
+		},
+	}
+
+	id, err := c.InsertClusterData(cluster, ctx, con, queryFunc, 60)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	stored, err := c.RetrieveCluster(id, ctx, con)
+	if err != nil {
+		t.Fatalf("unexpected error retrieving inserted cluster: %v", err)
+	}
+
+	if len(stored.HelmCharts) != 2 {
+		t.Fatalf("expected both charts to be stored, got %d", len(stored.HelmCharts))
+	}
+	if queried != 0 {
+		t.Errorf("expected no EOL lookups for charts without a version, got %d", queried)
+	}
+
+	for i, want := range cluster.HelmCharts {
+		got := stored.HelmCharts[i]
+		if got.ChartName != want.ChartName || got.ChartVersion != want.ChartVersion || got.ChartNamespace != want.ChartNamespace {
+			t.Errorf("chart %d: expected %s/%q/%s, got %s/%q/%s", i,
+				want.ChartName, want.ChartVersion, want.ChartNamespace,
+				got.ChartName, got.ChartVersion, got.ChartNamespace)
+		}
+		if got.ChartNewestVersion != "unknown" || got.ChartVersionEoF != "false" || got.ChartVersionExpired {
+			t.Errorf("chart %d: expected unknown/false/false EOL fields, got %q/%q/%t", i,
+				got.ChartNewestVersion, got.ChartVersionEoF, got.ChartVersionExpired)
+		}
+	}
 }
 
 func TestClusterInsertAndRetrieve_ChartVersionEoF_QueryError(t *testing.T) {
