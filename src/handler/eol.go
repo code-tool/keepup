@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -178,34 +177,20 @@ func fetchEOLEntries(client *http.Client, url string) ([]EndOfLifeEntry, error) 
 	return entries, nil
 }
 
-func isVersionExpired(current, newest string) bool {
-	if newest == "unknown" {
+// Reports whether the release cycle is past its end of life as of now. endoflife.date gives
+// either a date (support ends on that day) or a boolean; "false" and "unknown" are not expired.
+func isEOLReached(eol string, now time.Time) bool {
+	switch eol {
+	case "true":
+		return true
+	case "false", "unknown", "":
 		return false
 	}
 
-	parseVersion := func(label, version string) (int, int) {
-		segments := strings.Split(version, ".")
-		major, err := strconv.Atoi(segments[0])
-		if err != nil {
-			log.Printf("Can't parse %s version major segment %q: %v", label, version, err)
-		}
-		minor := 0
-		if len(segments) > 1 {
-			minor, err = strconv.Atoi(segments[1])
-			if err != nil {
-				log.Printf("Can't parse %s version minor segment %q: %v", label, version, err)
-			}
-		}
-		return major, minor
+	eolDate, err := time.Parse("2006-01-02", eol)
+	if err != nil {
+		log.Printf("Can't parse EOL date %q: %v", eol, err)
+		return false
 	}
-
-	currentMajor, currentMinor := parseVersion("current", current)
-	newestMajor, newestMinor := parseVersion("newest", newest)
-
-	if currentMajor < newestMajor {
-		return true
-	} else if currentMajor == newestMajor && currentMinor < newestMinor {
-		return true
-	}
-	return false
+	return !now.Before(eolDate)
 }

@@ -16,7 +16,7 @@ type KubernetesCluster struct {
 	ID          uuid.UUID       `json:"id"`
 	ClusterName string          `json:"cluster_name"` // Default value from scraper: minikube
 	KubeVersion string          `json:"kube_version"`
-	TeamCluster string          `json:"team"`
+	Team        string          `json:"team"`
 	HelmCharts  []HelmChartData `json:"helm_charts"`
 	UpdatedAt   string          `json:"updated_at"`
 }
@@ -64,9 +64,6 @@ func (c *KubernetesClusters) InsertClusterData(
 			continue
 		}
 
-		// Only major.minor is compared; the full version is what gets stored and exported.
-		version := extractMajorMinor(helmChart.ChartVersion)
-
 		latestVersion, eolDate, err := queryFunc(helmChart.ChartName, helmChart.ChartVersion)
 		if err != nil {
 			log.Printf("Failed to query EOL for Helm chart %s: %v", helmChart.ChartName, err)
@@ -79,7 +76,7 @@ func (c *KubernetesClusters) InsertClusterData(
 			eolDate = "false"
 		}
 
-		expired := isVersionExpired(version, latestVersion)
+		expired := isEOLReached(eolDate, time.Now())
 
 		updatedHelmCharts = append(updatedHelmCharts, HelmChartData{
 			ChartName:           helmChart.ChartName,
