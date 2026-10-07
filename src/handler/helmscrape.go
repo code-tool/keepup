@@ -44,7 +44,7 @@ func (c *KubernetesClusters) InsertClusterData(
 	cluster KubernetesCluster,
 	ctx context.Context,
 	con *redis.Client,
-	queryFunc func(string) (string, string, error),
+	queryFunc func(name, version string) (string, string, error),
 	ttl int,
 ) (uuid.UUID, error) {
 
@@ -67,7 +67,7 @@ func (c *KubernetesClusters) InsertClusterData(
 		// Only major.minor is compared; the full version is what gets stored and exported.
 		version := extractMajorMinor(helmChart.ChartVersion)
 
-		latestVersion, eolDate, err := queryFunc(helmChart.ChartName)
+		latestVersion, eolDate, err := queryFunc(helmChart.ChartName, helmChart.ChartVersion)
 		if err != nil {
 			log.Printf("Failed to query EOL for Helm chart %s: %v", helmChart.ChartName, err)
 			latestVersion = "unknown"

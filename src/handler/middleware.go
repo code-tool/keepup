@@ -117,8 +117,8 @@ func (p *PackageVersionsHandler) handleInsertPackages(w http.ResponseWriter, r *
 
 	ttl := p.TTL
 
-	id, err := p.PackageVersions.Insert(pkg, p.Context, p.Client, func(packageName string) (string, string, error) {
-		return queryEndOfLifeAPI(packageName, p.Context, p.Client)
+	id, err := p.PackageVersions.Insert(pkg, p.Context, p.Client, func(packageName, version string) (string, string, error) {
+		return queryEndOfLifeAPI(packageName, version, p.Context, p.Client)
 	}, ttl)
 
 	if err != nil {
@@ -196,8 +196,8 @@ func (s *KubernetesClusterMiddleware) handleInsertCluster(w http.ResponseWriter,
 		return
 	}
 
-	id, err := s.Clusters.InsertClusterData(cluster, s.Context, s.Client, func(chartName string) (string, string, error) {
-		return queryEndOfLifeAPI(chartName, s.Context, s.Client)
+	id, err := s.Clusters.InsertClusterData(cluster, s.Context, s.Client, func(chartName, version string) (string, string, error) {
+		return queryEndOfLifeAPI(chartName, version, s.Context, s.Client)
 	}, s.TTL)
 	if err != nil {
 		log.Println("Failed to insert cluster:", err)

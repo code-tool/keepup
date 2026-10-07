@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func noopQuery(name string) (string, string, error) {
+func noopQuery(name, version string) (string, string, error) {
 	return "unknown", "", nil
 }
 
