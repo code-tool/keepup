@@ -51,10 +51,20 @@ func (c *KubernetesClusters) InsertClusterData(
 	updatedHelmCharts := make([]HelmChartData, 0, len(cluster.HelmCharts))
 
 	for _, helmChart := range cluster.HelmCharts {
+		// Charts without a known version are still part of the inventory, just without EOL data.
 		if helmChart.ChartVersion == "unknown" || helmChart.ChartVersion == "" {
+			updatedHelmCharts = append(updatedHelmCharts, HelmChartData{
+				ChartName:           helmChart.ChartName,
+				ChartVersion:        helmChart.ChartVersion,
+				ChartNamespace:      helmChart.ChartNamespace,
+				ChartVersionEoF:     "false",
+				ChartNewestVersion:  "unknown",
+				ChartVersionExpired: false,
+			})
 			continue
 		}
 
+		// Only major.minor is compared; the full version is what gets stored and exported.
 		version := extractMajorMinor(helmChart.ChartVersion)
 
 		latestVersion, eolDate, err := queryFunc(helmChart.ChartName)
@@ -73,7 +83,7 @@ func (c *KubernetesClusters) InsertClusterData(
 
 		updatedHelmCharts = append(updatedHelmCharts, HelmChartData{
 			ChartName:           helmChart.ChartName,
-			ChartVersion:        version,
+			ChartVersion:        helmChart.ChartVersion,
 			ChartNamespace:      helmChart.ChartNamespace,
 			ChartVersionEoF:     eolDate,
 			ChartNewestVersion:  latestVersion,
