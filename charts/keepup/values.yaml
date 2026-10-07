@@ -18,7 +18,7 @@ main:
 
 redis:
   enabled: true
-  image: "redis:8.2.8"
+  image: "redis:8.2.10"
   pullPolicy: "IfNotPresent"
   # the official redis image's built-in non-root user
   securityContext:

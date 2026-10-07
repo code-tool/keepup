@@ -1,5 +1,5 @@
 FROM golang:1.25.12-trixie AS builder
-ARG BUILD_VERSION='v1.7.0'
+ARG BUILD_VERSION='v1.8.0'
 ENV LISTEN_PORT=9101
 WORKDIR /opt/keepup/
 COPY go.mod ./
