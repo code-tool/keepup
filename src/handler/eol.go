@@ -41,10 +41,15 @@ var supportedEOLProducts = []string{
 	"metallb",
 	"authentik",
 	"argo-cd",
+	"nginx",
+	"kibana",
+	"grafana",
 }
 
-// Products not on endoflife.date are reported as unknown without touching the cache.
-func queryEndOfLifeAPI(productName string, ctx context.Context, con *redis.Client) (string, string, error) {
+// Returns the newest released version of the product and the EOL of the release cycle
+// that currentVersion belongs to. Products not on endoflife.date are reported as unknown
+// without touching the cache.
+func queryEndOfLifeAPI(productName, currentVersion string, ctx context.Context, con *redis.Client) (string, string, error) {
 	response, err := getEOLData(ctx, con, productName)
 	if err != nil {
 		if err := updateEOLCache(ctx, con); err != nil {
@@ -56,23 +61,35 @@ func queryEndOfLifeAPI(productName string, ctx context.Context, con *redis.Clien
 		}
 	}
 
-	latestVersion := "unknown"
-	eolDate := "false"
-
-	for _, entry := range response {
-		if entry.Cycle == productName {
-			latestVersion = extractMajorMinor(entry.Latest)
-			eolDate = string(entry.EOL)
-			break
-		}
+	if len(response) == 0 {
+		return "unknown", "false", nil
 	}
 
-	if latestVersion == "unknown" && len(response) > 0 {
-		latestVersion = extractMajorMinor(response[0].Latest)
-		eolDate = string(response[0].EOL)
+	// endoflife.date lists cycles newest first.
+	latestVersion := extractMajorMinor(response[0].Latest)
+
+	eolDate := "unknown"
+	if entry, ok := findEOLCycle(response, currentVersion); ok {
+		eolDate = string(entry.EOL)
 	}
 
 	return latestVersion, eolDate, nil
+}
+
+// Cycles are named either major.minor (redis "7.2") or major only (debian "12"),
+// so the more specific match is tried first.
+func findEOLCycle(entries []EndOfLifeEntry, version string) (EndOfLifeEntry, bool) {
+	majorMinor := extractMajorMinor(version)
+	major := strings.SplitN(majorMinor, ".", 2)[0]
+
+	for _, cycle := range []string{majorMinor, major} {
+		for _, entry := range entries {
+			if entry.Cycle == cycle {
+				return entry, true
+			}
+		}
+	}
+	return EndOfLifeEntry{}, false
 }
 
 func updateEOLCache(ctx context.Context, con *redis.Client) error {

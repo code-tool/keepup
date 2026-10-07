@@ -36,7 +36,7 @@ Every data domain follows the same shape:
 
 On each scrape, the collector `SCAN`s all Redis keys for the domain, deserializes every entry, and emits one Prometheus metric per entity - there is no in-memory cache, so every scrape hits Redis directly.
 
-**Package EOL enrichment**: every `package-version` push is checked against `endoflife.date`, cached in Redis for 7 days under `eol_cache:all_packages`. Supported packages: `redis`, `memcached`, `mongodb`, `mysql`, `rabbitmq`, `envoy`, `debian`, `postgresql`, `elasticsearch`, `php`, `gitlab-runner`, `linux`, `openbao`, `metallb`, `authentik`, `argo-cd`. Versions are compared as `major.minor` only (Debian epoch prefixes like `5:7.0.15-1~deb12u1` are stripped down to `7.0`).
+**Package EOL enrichment**: every `package-version` push is checked against `endoflife.date`, cached in Redis for 7 days under `eol_cache:all_packages`. Supported packages: `redis`, `memcached`, `mongodb`, `mysql`, `rabbitmq`, `envoy`, `debian`, `postgresql`, `elasticsearch`, `php`, `gitlab-runner`, `linux`, `openbao`, `metallb`, `authentik`, `argo-cd`, `nginx`, `kibana`, `grafana`. Versions are compared as `major.minor` only (Debian epoch prefixes like `5:7.0.15-1~deb12u1` are stripped down to `7.0`).
 
 ## Quick start
 

@@ -41,7 +41,7 @@ func TestQueryEndOfLifeAPI_PackagesAndChartsShareCache(t *testing.T) {
 
 	// Mix of a package-style lookup, a chart-style lookup and a product endoflife.date doesn't know.
 	for _, name := range []string{"redis", "metallb", "keepup", "redis", "ingress-nginx"} {
-		if _, _, err := queryEndOfLifeAPI(name, ctx, con); err != nil {
+		if _, _, err := queryEndOfLifeAPI(name, "7.4.0", ctx, con); err != nil {
 			t.Fatalf("query %s: unexpected error: %v", name, err)
 		}
 	}
@@ -56,7 +56,7 @@ func TestQueryEndOfLifeAPI_UnknownProductIsReportedUnknown(t *testing.T) {
 	con := newTestClient(t)
 	newFakeEOLAPI(t)
 
-	latest, eol, err := queryEndOfLifeAPI("keepup", ctx, con)
+	latest, eol, err := queryEndOfLifeAPI("keepup", "1.0.0", ctx, con)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestQueryEndOfLifeAPI_ReturnsLatestAndEOL(t *testing.T) {
 	con := newTestClient(t)
 	newFakeEOLAPI(t)
 
-	latest, eol, err := queryEndOfLifeAPI("redis", ctx, con)
+	latest, eol, err := queryEndOfLifeAPI("redis", "7.4.0", ctx, con)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestQueryEndOfLifeAPI_RebuildsLegacyHelmChartCache(t *testing.T) {
 		t.Fatalf("failed to seed cache: %v", err)
 	}
 
-	latest, _, err := queryEndOfLifeAPI("redis", ctx, con)
+	latest, _, err := queryEndOfLifeAPI("redis", "7.4.0", ctx, con)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestUpdateEOLCache_ShortTTLOnPartialFailure(t *testing.T) {
 	}
 
 	// The failed product is reported as unknown rather than triggering another rebuild.
-	latest, _, err := queryEndOfLifeAPI("metallb", ctx, con)
+	latest, _, err := queryEndOfLifeAPI("metallb", "0.14.0", ctx, con)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -141,5 +141,47 @@ func TestUpdateEOLCache_FullTTLOnSuccess(t *testing.T) {
 	}
 	if ttl != eolCacheTTL {
 		t.Fatalf("expected TTL %s, got %s", eolCacheTTL, ttl)
+	}
+}
+
+func TestQueryEndOfLifeAPI_EOLComesFromInstalledCycle(t *testing.T) {
+	ctx := context.Background()
+	con := newTestClient(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`[
+			{"cycle":"7.4","eol":false,"latest":"7.4.2"},
+			{"cycle":"7.2","eol":"2025-02-28","latest":"7.2.7"},
+			{"cycle":"12","eol":"2028-06-30","latest":"12.11"}
+		]`))
+	}))
+	t.Cleanup(srv.Close)
+	orig := eolAPIBaseURL
+	eolAPIBaseURL = srv.URL
+	t.Cleanup(func() { eolAPIBaseURL = orig })
+
+	cases := []struct {
+		name, version, wantEOL string
+	}{
+		{"newest cycle", "7.4.1", "false"},
+		{"older cycle", "7.2.4", "2025-02-28"},
+		{"debian epoch prefix", "5:7.2.4-1~deb12u1", "2025-02-28"},
+		{"major-only cycle", "12.5", "2028-06-30"},
+		{"cycle not listed", "6.0.20", "unknown"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			latest, eol, err := queryEndOfLifeAPI("redis", tc.version, ctx, con)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if latest != "7.4" {
+				t.Errorf("expected newest version 7.4, got %s", latest)
+			}
+			if eol != tc.wantEOL {
+				t.Errorf("expected current_version_eof %q for %s, got %q", tc.wantEOL, tc.version, eol)
+			}
+		})
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func mockQueryFunc(string) (string, string, error) {
+func mockQueryFunc(string, string) (string, string, error) {
 	return "1.0", "", nil
 }
 
@@ -52,7 +52,7 @@ func TestClusterInsertAndRetrieve_ChartVersionEoF(t *testing.T) {
 	con := newTestClient(t)
 	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
 
-	queryFunc := func(chartName string) (string, string, error) {
+	queryFunc := func(chartName, version string) (string, string, error) {
 		return "7.2.0", "2026-01-01", nil
 	}
 
@@ -95,7 +95,7 @@ func TestClusterInsertAndRetrieve_KeepsChartsWithoutVersion(t *testing.T) {
 	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
 
 	queried := 0
-	queryFunc := func(chartName string) (string, string, error) {
+	queryFunc := func(chartName, version string) (string, string, error) {
 		queried++
 		return "7.2.0", "2026-01-01", nil
 	}
@@ -144,7 +144,7 @@ func TestClusterInsertAndRetrieve_ChartVersionEoF_QueryError(t *testing.T) {
 	con := newTestClient(t)
 	c := &KubernetesClusters{Items: make(map[uuid.UUID]KubernetesCluster)}
 
-	queryFunc := func(chartName string) (string, string, error) {
+	queryFunc := func(chartName, version string) (string, string, error) {
 		return "", "", errors.New("EOL API error")
 	}
 

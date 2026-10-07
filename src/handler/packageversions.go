@@ -73,7 +73,7 @@ func (c *PackageVersionss) Insert(
 	pkg PackageVersions,
 	ctx context.Context,
 	con *redis.Client,
-	queryFunc func(string) (string, string, error),
+	queryFunc func(name, version string) (string, string, error),
 	ttl int,
 ) (uuid.UUID, error) {
 
@@ -85,7 +85,7 @@ func (c *PackageVersionss) Insert(
 		}
 
 		currentVersion := extractMajorMinor(versionDetail.CurrentVersion)
-		latestVersion, eolDate, err := queryFunc(name)
+		latestVersion, eolDate, err := queryFunc(name, versionDetail.CurrentVersion)
 		if err != nil {
 			latestVersion = "unknown"
 		} else {
