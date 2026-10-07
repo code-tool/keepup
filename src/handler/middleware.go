@@ -197,8 +197,8 @@ func (s *KubernetesClusterMiddleware) handleInsertCluster(w http.ResponseWriter,
 	}
 
 	id, err := s.Clusters.InsertClusterData(cluster, s.Context, s.Client, func(chartName string) (string, string, error) {
-        return queryHelmChartEndOfLifeAPI(chartName, s.Context, s.Client)
-    }, s.TTL)
+		return queryEndOfLifeAPI(chartName, s.Context, s.Client)
+	}, s.TTL)
 	if err != nil {
 		log.Println("Failed to insert cluster:", err)
 		http.Error(w, "Failed to store data", http.StatusInternalServerError)
