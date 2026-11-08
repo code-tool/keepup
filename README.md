@@ -13,6 +13,7 @@ A lightweight Prometheus exporter that collects infrastructure inventory pushed 
   - [`PUT /package-version`](#put-package-version)
   - [`PUT /helm-cluster`](#put-helm-cluster)
 - [Metrics](#metrics)
+- [Maintenance portfolio](#maintenance-portfolio)
 - [Testing](#testing)
 - [Deploying with Helm](#deploying-with-helm)
 - [Releasing](#releasing)
@@ -76,6 +77,7 @@ Config is loaded from environment variables. If `APP_ENV` is unset, `keepup` loa
 | `REDIS_PORT` | `6379` | Redis port |
 | `REDIS_DBNO` | `7` | Redis logical DB number |
 | `TTL_SECONDS` | `300` | expiry for every stored entry |
+| `PORTFOLIO_DIR` | none | optional, directory with team maintenance catalogs, enables the [maintenance portfolio](#maintenance-portfolio) metrics when set |
 
 ## API
 
@@ -126,9 +128,58 @@ Unlike the other two endpoints, the request body maps directly onto the stored s
 | `package_version_info` | `id`, `package_name`, `current_version`, `current_version_eof`, `newest_version`, `expired`, `data_center`, `host_ip`, `team`, `environment` |
 | `kubernetes_cluster_info` | `id`, `cluster_name`, `kube_version`, `chart_name`, `chart_version`, `chart_namespace`, `current_version_eof`, `newest_version`, `expired`, `team`, `environment` |
 
+Maintenance metrics are listed in [Maintenance portfolio](#maintenance-portfolio).
+
+## Maintenance portfolio
+
+Optional. Each team describes, per kind of object it maintains, how often and how long maintenance takes. `keepup` multiplies these costs by the real object counts from its inventory and reports the team's planned yearly maintenance workload next to its capacity.
+
+One YAML file per team, loaded from `PORTFOLIO_DIR` once at startup (an invalid catalog stops the process):
+
+```yaml
+team: team-a              # must match the `team` sent by agents
+capacity_days: 60.0       # optional, yearly maintenance capacity
+hours_per_day: 8          # optional, default 8
+objects:
+  - name: mongo replicaset
+    environment: prod     # prod | non-prod
+    source: package       # package | helm | static
+    key: mongodb          # package_name (package) or chart_name (helm)
+    maintenances_per_year: 2
+    hours_per_object: 0.5
+    automation_factor: 1
+  - name: sentry
+    environment: prod
+    source: static        # not visible to keepup - count comes from the catalog
+    count: 1
+    maintenances_per_year: 4
+    hours_per_object: 12
+    automation_factor: 1
+```
+
+Object counts per `team` x `environment`:
+
+- `package` - hosts reporting the package with a known version (not `unknown`/empty);
+- `helm` - distinct `cluster` x `namespace` pairs where the chart is installed;
+- `static` - objects keepup cannot see and their number is set by hand in the catalog's `count` field.
+
+Unknown fields, unsupported `environment`/`source` values, non-positive costs and duplicate `(source, key, environment)` entries are rejected.
+
+| Metric | Labels | Value |
+|---|---|---|
+| `maintenance_objects` | `team`, `environment`, `object`, `source`, `key` | object count |
+| `maintenance_hours_annual` | same | `objects x maintenances_per_year x hours_per_object x automation_factor` |
+| `maintenance_capacity_hours` | `team` | `capacity_days x hours_per_day` |
+| `maintenance_uncatalogued_objects` | `team`, `environment`, `source`, `key` | inventory objects of a catalogued team that match no entry |
+
+```promql
+sum by (team, environment) (maintenance_hours_annual) / 8                        # days per year
+sum by (team) (maintenance_hours_annual) / on (team) maintenance_capacity_hours  # load, < 1 fits capacity
+```
+
 ## Testing
 
-Unit tests cover the handler package against an in-process fake Redis ([`miniredis`](https://github.com/alicebob/miniredis)) - no external services required:
+Unit tests cover the handler, metrics and portfolio packages against an in-process fake Redis ([`miniredis`](https://github.com/alicebob/miniredis)) - no external services required:
 
 ```bash
 go test ./...
@@ -149,9 +200,22 @@ cd tests/end-to-end && ./run.sh
 - `ttlSeconds` - entry expiry
 - `ingress.*` - expose the API externally
 - `servicemonitor.enabled` - wire up Prometheus scraping automatically
+- `portfolio.*` - team maintenance catalogs, see below
 
 ```bash
 helm install keepup charts/keepup --set apiToken=<your-token>
+```
+
+Maintenance catalogs are mounted into `/etc/keepup/portfolio` and enable the portfolio metrics:
+
+```yaml
+portfolio:
+  enabled: true
+  teams:                    # rendered into the keepup-portfolio ConfigMap, one <team>.yaml per key
+    team-a:
+      capacity_days: 60.0
+      objects: [...]
+  existingConfigMaps: []    # or ConfigMaps managed elsewhere, each with <team>.yaml keys
 ```
 
 ## Releasing

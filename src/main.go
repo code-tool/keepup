@@ -6,6 +6,7 @@ import (
 	"keepup/src/config"
 	"keepup/src/handler"
 	"keepup/src/metrics"
+	"keepup/src/portfolio"
 	"log"
 	"net/http"
 	"os"
@@ -77,6 +78,19 @@ func main() {
 
 	prometheus.MustRegister(packageCollector)
 	prometheus.MustRegister(HelmCollector)
+
+	if dir := os.Getenv("PORTFOLIO_DIR"); dir != "" {
+		catalog, err := portfolio.LoadDir(dir)
+		if err != nil {
+			log.Fatalf("Can't load maintenance portfolio from %s: %v", dir, err)
+		}
+		log.Printf("Loaded maintenance portfolio for %d team(s) from %s", len(catalog.Teams), dir)
+		prometheus.MustRegister(metrics.MaintenanceCollector{
+			Portfolio:   catalog,
+			PackageInfo: PackageHandler,
+			ClusterInfo: kubeClusterHandler,
+		})
+	}
 
 	shutdownWaiter.Add(1)
 	configureServer()

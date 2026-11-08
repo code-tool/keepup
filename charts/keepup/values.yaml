@@ -66,6 +66,23 @@ tolerations: []
 #    operator: "Exists"
 #    effect: "NoSchedule"
 
+# Per-team maintenance catalogs
+portfolio:
+  enabled: false
+  teams: {}
+  #  team-a:
+  #    capacity_days: 59.4
+  #    objects:
+  #      - name: mongo replicaset
+  #        environment: prod         # prod | non-prod
+  #        source: package           # package | helm | static
+  #        key: mongodb              # package_name / chart_name
+  #        maintenances_per_year: 2
+  #        hours_per_object: 0.5
+  #        automation_factor: 1
+  # ConfigMaps managed elsewhere, each with one or more <team>.yaml keys
+  existingConfigMaps: []
+
 apiToken: ''
 appEnv: prod
 listenPort: '9101'
