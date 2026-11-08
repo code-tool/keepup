@@ -17,6 +17,7 @@ var (
 	Expired           = "expired"
 	DataCenterpkg     = "data_center"
 	HostIPpkg         = "host_ip"
+	Environment       = "environment"
 
 	packageMetricDesc = prometheus.NewDesc(
 		"package_version_info",
@@ -31,6 +32,7 @@ var (
 			DataCenterpkg,
 			HostIPpkg,
 			Team,
+			Environment,
 		}, nil,
 	)
 )
@@ -65,6 +67,7 @@ func (pc PackageVersionsCollector) Collect(ch chan<- prometheus.Metric) {
 				pkgs.DataCenterPkg,
 				pkgs.HostIPPkg,
 				pkgs.Team,
+				pkgs.Environment,
 			)
 		}
 	}

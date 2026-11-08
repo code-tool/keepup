@@ -32,6 +32,7 @@ var (
 			NewestVersion,
 			Expired,
 			Team,
+			Environment,
 		}, nil,
 	)
 )
@@ -69,6 +70,7 @@ func (kc KubernetesClusterCollector) Collect(ch chan<- prometheus.Metric) {
 				chart.ChartNewestVersion,
 				fmt.Sprintf("%t", chart.ChartVersionExpired),
 				cluster.Team,
+				cluster.Environment,
 			)
 		}
 	}

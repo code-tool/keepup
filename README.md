@@ -92,12 +92,13 @@ All data endpoints require an `x-api-token` header matching `API_TOKEN`, and acc
     "mysql": "unknown",
     "host_ip": "101.122.418.4",
     "data_center": "aaa",
-    "team": "platform"
+    "team": "platform",
+    "environment": "prod"
   }
 }
 ```
 
-`host_ip`, `data_center`, and `team` are pulled out of the map and stored as entity metadata; every remaining key is treated as a package name -> installed version pair. Each package is enriched with `current_version_eof`, `newest_version`, and `expired` before being persisted.
+`host_ip`, `data_center`, `team`, and `environment` are pulled out of the map and stored as entity metadata; every remaining key is treated as a package name -> installed version pair. Each package is enriched with `current_version_eof`, `newest_version`, and `expired` before being persisted.
 
 ### `PUT /helm-cluster`
 
@@ -106,6 +107,7 @@ All data endpoints require an `x-api-token` header matching `API_TOKEN`, and acc
   "cluster_name": "minikube",
   "kube_version": "1.29.0",
   "team": "platform",
+  "environment": "non-prod",
   "helm_charts": [
     { "chart_name": "redis", "version": "18.1.5", "namespace": "database" },
     { "chart_name": "keepup", "version": "0.5.0", "namespace": "monitoring" }
@@ -113,14 +115,16 @@ All data endpoints require an `x-api-token` header matching `API_TOKEN`, and acc
 }
 ```
 
+`environment` (both endpoints) must be `prod` or `non-prod` (case-insensitive); it defaults to `prod` when omitted, and any other value is rejected with `400`.
+
 Unlike the other two endpoints, the request body maps directly onto the stored struct (no wrapper key, no field filtering).
 
 ## Metrics
 
 | Metric | Labels                                                                                                                                    |
 |---|-------------------------------------------------------------------------------------------------------------------------------------------|
-| `package_version_info` | `id`, `package_name`, `current_version`, `current_version_eof`, `newest_version`, `expired`, `data_center`, `host_ip`, `team`             |
-| `kubernetes_cluster_info` | `id`, `cluster_name`, `kube_version`, `chart_name`, `chart_version`, `chart_namespace`, `current_version_eof`, `newest_version`, `expired`, `team` |
+| `package_version_info` | `id`, `package_name`, `current_version`, `current_version_eof`, `newest_version`, `expired`, `data_center`, `host_ip`, `team`, `environment` |
+| `kubernetes_cluster_info` | `id`, `cluster_name`, `kube_version`, `chart_name`, `chart_version`, `chart_namespace`, `current_version_eof`, `newest_version`, `expired`, `team`, `environment` |
 
 ## Testing
 

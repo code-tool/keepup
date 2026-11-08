@@ -2,6 +2,7 @@
   "cluster_name": "minikube",
   "kube_version": "1.29.0",
   "team": "platform",
+  "environment": "non-prod",
   "helm_charts": [
     {
       "chart_name": "redis",

@@ -26,6 +26,7 @@ type PackageVersions struct {
 	DataCenterPkg string                   `json:"data_center"`
 	HostIPPkg     string                   `json:"host_ip"`
 	Team          string                   `json:"team"`
+	Environment   string                   `json:"environment"`
 	UpdatedAt     string                   `json:"updated_at"`
 	Packages      map[string]PackageDetail `json:"packages"`
 }
@@ -76,6 +77,12 @@ func (c *PackageVersionss) Insert(
 	queryFunc func(name, version string) (string, string, error),
 	ttl int,
 ) (uuid.UUID, error) {
+
+	env, err := normalizeEnvironment(pkg.Environment)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	pkg.Environment = env
 
 	updatedPackages := make(map[string]PackageDetail)
 

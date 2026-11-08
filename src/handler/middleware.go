@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -96,7 +97,7 @@ func (p *PackageVersionsHandler) handleInsertPackages(w http.ResponseWriter, r *
 
 	cleanedPackages := make(map[string]string)
 	for key, value := range req.Packages {
-		if key != "host_ip" && key != "data_center" && key != "team" {
+		if key != "host_ip" && key != "data_center" && key != "team" && key != "environment" {
 			cleanedPackages[key] = value
 		}
 	}
@@ -112,6 +113,7 @@ func (p *PackageVersionsHandler) handleInsertPackages(w http.ResponseWriter, r *
 		DataCenterPkg: req.Packages["data_center"],
 		HostIPPkg:     req.Packages["host_ip"],
 		Team:          req.Packages["team"],
+		Environment:   req.Packages["environment"],
 		Packages:      convertedPackages,
 	}
 
@@ -121,6 +123,10 @@ func (p *PackageVersionsHandler) handleInsertPackages(w http.ResponseWriter, r *
 		return queryEndOfLifeAPI(packageName, version, p.Context, p.Client)
 	}, ttl)
 
+	if errors.Is(err, ErrInvalidEnvironment) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	if err != nil {
 		log.Printf("Failed to insert packages: %v", err)
 		http.Error(w, "Failed to insert package data", http.StatusInternalServerError)
@@ -199,6 +205,10 @@ func (s *KubernetesClusterMiddleware) handleInsertCluster(w http.ResponseWriter,
 	id, err := s.Clusters.InsertClusterData(cluster, s.Context, s.Client, func(chartName, version string) (string, string, error) {
 		return queryEndOfLifeAPI(chartName, version, s.Context, s.Client)
 	}, s.TTL)
+	if errors.Is(err, ErrInvalidEnvironment) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	if err != nil {
 		log.Println("Failed to insert cluster:", err)
 		http.Error(w, "Failed to store data", http.StatusInternalServerError)

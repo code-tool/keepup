@@ -17,6 +17,7 @@ type KubernetesCluster struct {
 	ClusterName string          `json:"cluster_name"` // Default value from scraper: minikube
 	KubeVersion string          `json:"kube_version"`
 	Team        string          `json:"team"`
+	Environment string          `json:"environment"`
 	HelmCharts  []HelmChartData `json:"helm_charts"`
 	UpdatedAt   string          `json:"updated_at"`
 }
@@ -47,6 +48,12 @@ func (c *KubernetesClusters) InsertClusterData(
 	queryFunc func(name, version string) (string, string, error),
 	ttl int,
 ) (uuid.UUID, error) {
+
+	env, err := normalizeEnvironment(cluster.Environment)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	cluster.Environment = env
 
 	updatedHelmCharts := make([]HelmChartData, 0, len(cluster.HelmCharts))
 
