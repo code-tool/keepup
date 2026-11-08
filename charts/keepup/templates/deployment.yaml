@@ -17,9 +17,14 @@ spec:
       labels:
         app: keepup
         type: backend
-      {{- if .Values.annotations }}
+      {{- if or .Values.annotations .Values.portfolio.enabled }}
       annotations:
-        {{- toYaml .Values.annotations | nindent 8 }}
+        {{- with .Values.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.portfolio.enabled }}
+        checksum/portfolio: {{ include (print $.Template.BasePath "/config-portfolio.yaml") . | sha256sum }}
+        {{- end }}
       {{- end }}
     spec:
       {{- with .Values.podSecurityContext }}
@@ -50,6 +55,12 @@ spec:
           {{- with .Values.main.securityContext }}
           securityContext: {{ toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.portfolio.enabled }}
+          volumeMounts:
+            - name: portfolio
+              mountPath: /etc/keepup/portfolio
+              readOnly: true
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.listenPort | int }}
@@ -59,3 +70,17 @@ spec:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 60
+      {{- if .Values.portfolio.enabled }}
+      volumes:
+        - name: portfolio
+          projected:
+            sources:
+              {{- if .Values.portfolio.teams }}
+              - configMap:
+                  name: keepup-portfolio
+              {{- end }}
+              {{- range .Values.portfolio.existingConfigMaps }}
+              - configMap:
+                  name: {{ . }}
+              {{- end }}
+      {{- end }}

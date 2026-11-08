@@ -1,0 +1,14 @@
+{{- if and .Values.portfolio.enabled (not .Values.portfolio.teams) (not .Values.portfolio.existingConfigMaps) }}
+{{- fail "portfolio.enabled requires portfolio.teams or portfolio.existingConfigMaps" }}
+{{- end }}
+{{- if and .Values.portfolio.enabled .Values.portfolio.teams }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: keepup-portfolio
+data:
+  {{- range $team, $catalog := .Values.portfolio.teams }}
+  {{ $team }}.yaml: |
+    {{- toYaml (merge (dict "team" $team) $catalog) | nindent 4 }}
+  {{- end }}
+{{- end }}

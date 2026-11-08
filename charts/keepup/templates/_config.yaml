@@ -41,4 +41,9 @@
       name: keepup-seecret
       key: API_TOKEN
 
-{{ end -}}
+{{- if .Values.portfolio.enabled }}
+- name: PORTFOLIO_DIR
+  value: /etc/keepup/portfolio
+{{- end }}
+
+{{- end }}
